@@ -1,0 +1,11 @@
+# 1. Desactivar el motor de PHP en esta carpeta
+php_flag engine off
+
+# 2. Bloquear la ejecución de scripts comunes
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|php8|phps|pl|py|cgi|sh|asp|aspx)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# 3. Evitar que la gente liste o vea el contenido de la carpeta en forma de directorio
+Options -Indexes
