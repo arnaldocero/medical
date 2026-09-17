@@ -10,6 +10,14 @@ require_once 'config/db.php';
 try {
     $stmtEsp = $pdo->query("SELECT id, nombre FROM especialidades WHERE estado = 1 ORDER BY nombre ASC");
     $especialidades = $stmtEsp->fetchAll(PDO::FETCH_ASSOC);
+    // Consulta de roles médicos disponibles (Roles creados para personal facultativo)
+    $stmtRolesMedicos = $pdo->query("
+    SELECT id, nombre_rol 
+    FROM roles_clinicas 
+    WHERE nombre_rol LIKE '%Medico%' OR id = 2 
+    ORDER BY nombre_rol ASC
+    ");
+    $rolesMedicos = $stmtRolesMedicos->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $especialidades = [];
 }
@@ -89,12 +97,14 @@ try {
                             <small id="passHelp" class="form-text text-muted d-none">Deje en blanco si no desea cambiarla.</small>
                         </div>
                         <div class="col-md-4 mb-2">
-                            <label>Rol Interno *</label>
-                            <select name="rol_id" id="rol_id" class="form-control" required>
-                                <option value="2">Médico Especialista</option>
-                                <option value="3">Personal Clínico / Soporte</option>
-                            </select>
-                        </div>
+                        <label>Rol Interno *</label>
+                        <select name="rol_id" id="rol_id" class="form-control" required>
+                            <option value="">Seleccione Rol...</option>
+                            <?php foreach($rolesMedicos as $rm): ?>
+                                <option value="<?= $rm['id'] ?>"><?= htmlspecialchars($rm['nombre_rol']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     </div>
 
                     <div class="col-12 mt-3 px-0">

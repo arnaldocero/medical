@@ -67,7 +67,7 @@ include_once 'modal_atencion_express.php';
         <?php endif; ?>
 
         <!-- CATEGORÍA: PERSONAL Y PACIENTES -->
-        <?php if (tienePermiso('usuarios.administrar') || tienePermiso('medicos.administrar') || tienePermiso('pacientes.gestionar')): ?>
+        <?php if (tienePermiso('usuarios.administrar') || tienePermiso('medicos.administrar') || tienePermiso('pacientes.gestionar') || (isset($_SESSION['rol']) && $_SESSION['rol'] == 1) || tienePermiso('roles.administrar')): ?>
         <li class="nav-item has-treeview">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-users"></i>
@@ -82,6 +82,16 @@ include_once 'modal_atencion_express.php';
               <a href="usuarios.php" class="nav-link">
                 <i class="fas fa-user-shield nav-icon"></i>
                 <p>Gestión Usuarios</p>
+              </a>
+            </li>
+            <?php endif; ?>
+
+            <!-- NUEVO: GESTIÓN DE ROLES (SOLO VISIBLE PARA ADMIN O CON PERMISO) -->
+            <?php if ((isset($_SESSION['rol']) && $_SESSION['rol'] == 1) || tienePermiso('roles.administrar')): ?>
+            <li class="nav-item">
+              <a href="roles.php" class="nav-link">
+                <i class="fas fa-user-tag nav-icon text-warning"></i>
+                <p>Gestión Roles</p>
               </a>
             </li>
             <?php endif; ?>
@@ -118,16 +128,14 @@ include_once 'modal_atencion_express.php';
             </p>
           </a>
           <ul class="nav nav-treeview pl-2">
-            <!-- DENTRO DE layout/sidebar.php -->
             <?php if (tienePermiso('citas.express')): ?>
-              <!-- OPCIÓN ACTUALIZADA: Redirige a la interfaz de Atención Express -->
-              <li class="nav-item">
-                <a href="atencion_express.php" class="nav-link text-warning">
-                  <i class="fas fa-bolt nav-icon"></i>
-                  <p>Atención Express</p>
-                </a>
-              </li>
-              <?php endif; ?>
+            <li class="nav-item">
+              <a href="atencion_express.php" class="nav-link text-warning">
+                <i class="fas fa-bolt nav-icon"></i>
+                <p>Atención Express</p>
+              </a>
+            </li>
+            <?php endif; ?>
 
             <?php if (tienePermiso('citas.agendar')): ?>
             <li class="nav-item">

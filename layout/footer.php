@@ -40,6 +40,7 @@
 <script src="dist/js/rips.js"></script>
 <script src="dist/js/expediente.js"></script>
 <script src="dist/js/atencion_express.js"></script>
+<script src="dist/js/roles.js"></script>
 <!-- Scripts requeridos -->
 
 <script src="dist/js/inventario.js"></script>

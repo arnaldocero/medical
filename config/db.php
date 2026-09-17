@@ -1,5 +1,5 @@
 <?php
-$host = "localhost";
+$host = "medicalcreationsbusinesses.com";
 $db   = "medical6_HMS";
 $user = "medical6_admin";
 $pass = "}a),S!jyJgQJ";

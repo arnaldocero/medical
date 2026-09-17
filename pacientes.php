@@ -7,25 +7,38 @@ include 'layout/nav.php';
 include 'layout/sidebar.php'; 
 require_once 'config/db.php';
 
+$clinica_id_sesion = $_SESSION['clinica'] ?? null;
+
 try {
-    // 1. CONSULTA DE PACIENTES: Añadimos un LEFT JOIN a la tabla eps para ver el NOMBRE en la tabla
+    // 1. CONSULTA DE ROLES ASIGNABLES A PACIENTES
+    $stmtRolesPacientes = $pdo->query("
+        SELECT id, nombre_rol 
+        FROM roles_clinicas 
+        WHERE nombre_rol LIKE '%Paciente%' OR id = 5 
+        ORDER BY id ASC
+    ");
+    $rolesPacientes = $stmtRolesPacientes->fetchAll(PDO::FETCH_ASSOC);
+
+    // 2. CONSULTA DE PACIENTES CON ROL Y EPS ASOCIADA
     $stmt = $pdo->prepare("
         SELECT 
             p.id, p.usuario_id, p.fecha_nacimiento, p.genero, p.tipo_sangre, 
             p.documento_identidad, p.telefono_contacto, p.direccion, p.eps_id, 
             p.contacto_emergencia_nombre, p.contacto_emergencia_telefono,
-            u.nombre, u.email, u.estado,
-            e.nombre AS nombre_eps
+            u.nombre, u.email, u.estado, u.usuario, u.rol_id,
+            e.nombre AS nombre_eps,
+            r.nombre_rol
         FROM pacientes_datos p
         INNER JOIN usuarios_clinicas u ON p.usuario_id = u.id 
+        LEFT JOIN roles_clinicas r ON u.rol_id = r.id
         LEFT JOIN eps e ON p.eps_id = e.id
+        WHERE u.clinica_id = ?
         ORDER BY p.id DESC
     ");
-    $stmt->execute();
+    $stmt->execute([$clinica_id_sesion]);
     $pacientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. CONSULTA DE EPS: Para llenar la lista desplegable del modal
-    $clinica_id_sesion = $_SESSION['clinica'] ?? null;
+    // 3. CONSULTA DE EPS ACTIVAS PARA EL MODAL
     if (!$clinica_id_sesion) {
         $listaEps = [];
     } else {
@@ -64,6 +77,7 @@ try {
                             <th>Email</th>
                             <th>Teléfono</th>
                             <th>EPS</th>
+                            <th>Tipo / Rol</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
@@ -76,6 +90,9 @@ try {
                             <td><?= htmlspecialchars($p['email']) ?></td>
                             <td><?= htmlspecialchars($p['telefono_contacto']) ?></td>
                             <td><?= htmlspecialchars($p['nombre_eps'] ?? 'Sin EPS') ?></td>
+                            <td>
+                                <span class="badge badge-info"><?= htmlspecialchars($p['nombre_rol'] ?? 'Paciente') ?></span>
+                            </td>
                             <td>
                                 <?= $p['estado'] == 1 
                                     ? '<span class="badge badge-success">Activo</span>' 
@@ -97,6 +114,7 @@ try {
                                         data-nombre="<?= htmlspecialchars($p['nombre']) ?>" 
                                         data-email="<?= htmlspecialchars($p['email']) ?>" 
                                         data-user="<?= htmlspecialchars($p['usuario'] ?? '') ?>"
+                                        data-rol="<?= $p['rol_id'] ?>"
                                         data-estado="<?= $p['estado'] ?>"
                                         data-doc="<?= htmlspecialchars($p['documento_identidad']) ?>"
                                         data-fnac="<?= htmlspecialchars($p['fecha_nacimiento']) ?>"
@@ -140,24 +158,32 @@ try {
                     <div class="row">
                         <div class="col-12"><h5>Información de Cuenta de Usuario</h5><hr></div>
                         <div class="col-md-6 mb-2">
-                            <label>Nombre Completo</label>
+                            <label>Nombre Completo *</label>
                             <input type="text" name="nombre" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-2">
-                            <label>Email</label>
+                            <label>Email *</label>
                             <input type="email" name="email" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-2">
-                            <label>Nombre de Usuario (Login)</label>
+                            <label>Nombre de Usuario (Login) *</label>
                             <input type="text" name="usuario" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-2">
-                            <label id="labelPassword">Contraseña</label>
+                            <label id="labelPassword">Contraseña *</label>
                             <input type="password" name="password" id="inputPassword" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-2">
+                            <label>Tipo de Paciente (Rol) *</label>
+                            <select name="rol_id" id="rol_id_paciente" class="form-control" required>
+                                <?php foreach($rolesPacientes as $rp): ?>
+                                    <option value="<?= $rp['id'] ?>"><?= htmlspecialchars($rp['nombre_rol']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-2">
                             <label>Estado del Registro</label>
-                            <select name="estado" class="form-control" required>
+                            <select name="estado" id="estado_paciente" class="form-control" required>
                                 <option value="1">Activo</option>
                                 <option value="0">Inactivo</option>
                             </select>
@@ -165,15 +191,15 @@ try {
 
                         <div class="col-12 mt-3"><h5>Ficha de Datos del Paciente</h5><hr></div>
                         <div class="col-md-4 mb-2">
-                            <label>Documento de Identidad</label>
+                            <label>Documento de Identidad *</label>
                             <input type="text" name="documento_identidad" class="form-control" required>
                         </div>
                         <div class="col-md-4 mb-2">
-                            <label>Fecha de Nacimiento</label>
+                            <label>Fecha de Nacimiento *</label>
                             <input type="date" name="fecha_nacimiento" class="form-control" required>
                         </div>
                         <div class="col-md-4 mb-2">
-                            <label>Género</label>
+                            <label>Género *</label>
                             <select name="genero" class="form-control" required>
                                 <option value="">Seleccione...</option>
                                 <option value="Masculino">Masculino</option>
@@ -183,7 +209,7 @@ try {
                         </div>
                         <div class="col-md-4 mb-2">
                             <label>Tipo de Sangre</label>
-                            <select name="tipo_sangre" class="form-control" required>
+                            <select name="tipo_sangre" class="form-control">
                                 <option value="">Seleccione...</option>
                                 <option value="O+">O+</option>
                                 <option value="O-">O-</option>
@@ -196,11 +222,11 @@ try {
                             </select>
                         </div>
                         <div class="col-md-4 mb-2">
-                            <label>Teléfono Contacto</label>
+                            <label>Teléfono Contacto *</label>
                             <input type="text" name="telefono_contacto" class="form-control" required>
                         </div>
                         <div class="col-md-4 mb-2">
-                            <label>EPS (Entidad de Salud)</label>
+                            <label>EPS (Entidad de Salud) *</label>
                             <select name="eps_id" class="form-control" required>
                                 <option value="">Seleccione una EPS...</option>
                                 <?php foreach($listaEps as $eps): ?>
@@ -209,7 +235,7 @@ try {
                             </select>
                         </div>
                         <div class="col-md-12 mb-2">
-                            <label>Dirección de Residencia</label>
+                            <label>Dirección de Residencia *</label>
                             <input type="text" name="direccion" class="form-control" required>
                         </div>
 

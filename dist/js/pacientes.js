@@ -1,5 +1,5 @@
 $(document).ready(function () {
-    // Inicializar DataTable local sobre la tabla ya renderizada por PHP
+    // Inicializar DataTable
     const tabla = $('#tablaPacientes').DataTable({
         "language": {
             "url": "https://cdn.datatables.net/plug-ins/1.13.5/i18n/es-ES.json"
@@ -17,7 +17,7 @@ $(document).ready(function () {
         $('#btnGuardar').removeClass('btn-warning').addClass('btn-primary').text('Guardar Registro');
         
         $('#inputPassword').attr('required', true).attr('placeholder', '');
-        $('#labelPassword').text('Contraseña');
+        $('#labelPassword').text('Contraseña *');
 
         $('#modalPaciente').modal('show');
     });
@@ -26,27 +26,25 @@ $(document).ready(function () {
     $('#tablaPacientes').on('click', '.btnEditar', function () {
         $('#formPaciente')[0].reset();
 
-        // Extraer identificadores relacionales
         const id = $(this).data('id');
         const uid = $(this).data('uid');
 
         $('#idPacienteEdit').val(id);
         $('#idUsuarioEdit').val(uid);
 
-        // Mutar estilo visual a Modo Edición
         $('#modalTitle').text('Modificar Información del Paciente');
         $('.modal-header').removeClass('bg-primary').addClass('bg-warning');
         $('#btnGuardar').removeClass('btn-primary').addClass('btn-warning').text('Guardar Cambios');
         
-        // Desactivar obligatoriedad de password
         $('#inputPassword').removeAttr('required').attr('placeholder', 'Dejar en blanco para no modificar');
         $('#labelPassword').text('Contraseña (Opcional)');
 
-        // Inyección estricta basándose en los atributos data-* corregidos
+        // Inyección de campos
         $('input[name="nombre"]').val($(this).data('nombre'));
         $('input[name="email"]').val($(this).data('email'));
-        $('input[name="usuario"]').val($(this).data('user')); // ¡Línea agregada!
-        $('select[name="estado"]').val($(this).data('estado'));
+        $('input[name="usuario"]').val($(this).data('user'));
+        $('#rol_id_paciente').val($(this).data('rol'));
+        $('#estado_paciente').val($(this).data('estado'));
 
         $('input[name="documento_identidad"]').val($(this).data('doc'));
         $('input[name="fecha_nacimiento"]').val($(this).data('fnac'));
@@ -81,19 +79,19 @@ $(document).ready(function () {
                         text: res.message,
                         icon: 'success'
                     }).then(() => {
-                        location.reload(); // Recarga para actualizar el renderizado del foreach de PHP
+                        location.reload();
                     });
                 } else {
-                    Swal.fire('Error', res.message, 'error');
+                    Swal.fire('Atención', res.message, 'warning');
                 }
             },
             error: function () {
-                Swal.fire('Error Técnico', 'Ocurrió un problema en la petición AJAX.', 'error');
+                Swal.fire('Error Técnico', 'Ocurrió un problema en la petición con el servidor.', 'error');
             }
         });
     });
 
-    // Eliminar Paciente en Cascada Transaccional
+    // Desactivar / Eliminar Paciente
     $('#tablaPacientes').on('click', '.btnEliminar', function () {
         const id = $(this).data('id');
         const uid = $(this).data('uid');
@@ -101,12 +99,12 @@ $(document).ready(function () {
 
         Swal.fire({
             title: `¿Eliminar a ${nombre}?`,
-            text: "Esta acción borrará de manera definitiva el expediente médico y la cuenta de acceso.",
+            text: "El paciente será desactivado del sistema para no romper su historial clínico.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Sí, eliminar',
+            confirmButtonText: 'Sí, desactivar',
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -125,50 +123,47 @@ $(document).ready(function () {
                         }
                     },
                     error: function () {
-                        Swal.fire('Error Técnico', 'No se pudo procesar la eliminación.', 'error');
+                        Swal.fire('Error Técnico', 'No se pudo procesar la baja del registro.', 'error');
                     }
                 });
             }
         });
     });
 
-    // NUEVO: Lanzar el visor dinámico del expediente e historias clínicas
+    // Cargar Historial Clínico
     $('#tablaPacientes').on('click', '.btnHistorial', function () {
         const paciente_id = $(this).data('id');
         const nombre = $(this).data('nombre');
         
         $('#lblNombrePacienteHistorial').text(nombre);
-        $('#contenedorHistorial').html('<div class="text-center my-4"><i class="fas fa-spinner fa-spin fa-2x text-indigo"></i><p class="mt-2">Extrayendo datos de la historia clínica...</p></div>');
+        $('#contenedorHistorial').html('<div class="text-center my-4"><i class="fas fa-spinner fa-spin fa-2x text-indigo"></i><p class="mt-2">Cargando historial médico...</p></div>');
         $('#modalHistorialClinico').modal('show');
 
         $.ajax({
             url: 'ajax/pacientes_action.php?action=obtener_historial',
             type: 'POST',
             data: { paciente_id: paciente_id },
-            dataType: 'html', // Esperamos una respuesta maquetada en HTML estructurado
+            dataType: 'html',
             success: function (htmlResponse) {
                 $('#contenedorHistorial').html(htmlResponse);
             },
             error: function () {
-                $('#contenedorHistorial').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> No se pudo establecer conexión con el módulo de registros médicos.</div>');
+                $('#contenedorHistorial').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Error al recuperar registros médicos.</div>');
             }
         });
     });
 
-    // IMPLEMENTACIÓN DE ACCIÓN: BOTÓN PARA IMPRIMIR O GUARDAR HISTORIA CLÍNICA EN PDF
+    // Imprimir o Exportar PDF
     $('#btnImprimirHistorial').on('click', function () {
         const nombrePaciente = $('#lblNombrePacienteHistorial').text();
         const contenidoHistorial = $('#contenedorHistorial').html();
 
-        // Validar si hay registros reales en pantalla antes de proceder
         if (!contenidoHistorial || contenidoHistorial.includes('alert-info') || contenidoHistorial.includes('fa-spinner')) {
-            Swal.fire('Atención', 'No hay registros válidos en el historial para generar un documento.', 'warning');
+            Swal.fire('Atención', 'No hay registros clínicos para generar el documento.', 'warning');
             return;
         }
 
-        // Crear una ventana independiente del navegador para formatear la impresión limpia
         const popup = window.open('', '_blank', 'width=900,height=750');
-        
         popup.document.write(`
             <!DOCTYPE html>
             <html>
@@ -185,7 +180,6 @@ $(document).ready(function () {
                     .badge-success { background-color: #28a745 !important; color: #fff !important; border: none; }
                     .badge-danger { background-color: #dc3545 !important; color: #fff !important; border: none; }
                     .blockquote-footer { color: #333 !important; background-color: #f8f9fa !important; border: 1px solid #e9ecef; }
-                    /* Agrega esto a la etiqueta <style> del string de impresión */
                     .card-teal { border-top: 3px solid #20c997 !important; }
                     .text-teal { color: #20c997 !important; }
                     .bg-teal { background-color: #20c997 !important; color: #fff !important; }
@@ -199,23 +193,18 @@ $(document).ready(function () {
                 <div class="container-fluid">
                     <div class="row mb-4">
                         <div class="col-12 text-center">
-                            <h2 class="font-weight-bold tracking-tight">REPORTE CONSOLIDADO DE HISTORIA CLÍNICA</h2>
+                            <h2 class="font-weight-bold">REPORTE CONSOLIDADO DE HISTORIA CLÍNICA</h2>
                             <h4 class="text-secondary">Paciente: <strong>${nombrePaciente}</strong></h4>
-                            <p class="small text-muted">Documento generado el: ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString()}</p>
+                            <p class="small text-muted">Generado el: ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString()}</p>
                             <hr style="border-top: 2px solid #333;">
                         </div>
                     </div>
-                    
                     <div class="row">
-                        <div class="col-12">
-                            ${contenidoHistorial}
-                        </div>
+                        <div class="col-12">${contenidoHistorial}</div>
                     </div>
                 </div>
-                
                 <script>
                     window.onload = function() {
-                        // Forzar una breve espera para garantizar que carguen los CSS externos
                         setTimeout(function() {
                             window.print();
                             window.close();
@@ -225,7 +214,6 @@ $(document).ready(function () {
             </body>
             </html>
         `);
-        
         popup.document.close();
     });
 });
