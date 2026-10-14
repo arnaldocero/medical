@@ -12,7 +12,7 @@ define('APP_URL', '');
 
 // Remitente de los correos del sistema (debe ser un buzón del dominio del servidor)
 define('MAIL_FROM', 'no-reply@medicalcreationsbusinesses.com');
-define('MAIL_FROM_NAME', 'ClinicaSoft');
+define('MAIL_FROM_NAME', 'Medical Creations');
 
 /**
  * Devuelve la URL base de la aplicación (sin barra final).

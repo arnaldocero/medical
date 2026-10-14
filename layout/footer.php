@@ -15,6 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js"></script>
 <script src="plugins/sweetalert2/sweetalert2.all.min.js"></script>
 <script src="dist/js/adminlte.min.js"></script>
+<script src="dist/js/mayusculas.js"></script>
 <script src="dist/js/usuarios.js"></script>
 <script src="dist/js/centros.js"></script>
 <script src="dist/js/especialidades.js"></script>

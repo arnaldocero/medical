@@ -17,7 +17,7 @@ if (isset($_SESSION['id'])) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sistema Médico | Iniciar Sesión</title>
+  <title>Medical Creations | Iniciar Sesión</title>
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
   <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
@@ -29,7 +29,7 @@ if (isset($_SESSION['id'])) {
 <div class="login-box">
   <div class="card card-outline card-primary">
     <div class="card-header text-center">
-      <a href="#" class="h1"><b>Clinica</b>Soft</a>
+      <a href="#" class="h1"><b>Medical</b> Creations</a>
     </div>
     <div class="card-body">
       <p class="login-box-msg">Ingresa tus credenciales para iniciar sesión</p>
