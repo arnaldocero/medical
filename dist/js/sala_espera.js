@@ -84,6 +84,9 @@ $(document).ready(function() {
         });
     }
 
-    actualizarContenidoSala();
-    setInterval(actualizarContenidoSala, 3000); // Monitoreo rápido cada 3 segundos en el TV
+    // Solo monitorear cuando se está en la pantalla de Sala de Espera
+    if ($('#tbodySalaEspera').length) {
+        actualizarContenidoSala();
+        setInterval(actualizarContenidoSala, 3000); // Monitoreo rápido cada 3 segundos en el TV
+    }
 });

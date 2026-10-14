@@ -4,6 +4,9 @@ error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX('diagnosticos.cie10');
 
 // Validación de seguridad de sesión general (Cualquier clínica activa puede consumir esta maestra)
 if (!isset($_SESSION['id'])) {

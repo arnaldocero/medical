@@ -3,6 +3,16 @@
 require_once 'config/db.php';
 require_once 'config/security.php';
 include_once 'modal_atencion_express.php';
+
+// Inicial del nombre del usuario para el avatar (compatible con tildes y Ñ)
+$nombreUsuario = trim($_SESSION['nombre'] ?? '');
+if ($nombreUsuario === '') {
+    $inicialUsuario = '?';
+} elseif (function_exists('mb_substr')) {
+    $inicialUsuario = mb_strtoupper(mb_substr($nombreUsuario, 0, 1, 'UTF-8'), 'UTF-8');
+} else {
+    $inicialUsuario = strtoupper(substr($nombreUsuario, 0, 1));
+}
 ?>
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
   <a href="index.php" class="brand-link">
@@ -13,10 +23,12 @@ include_once 'modal_atencion_express.php';
   <div class="sidebar">
     <div class="user-panel mt-3 pb-3 mb-3 d-flex">
       <div class="image">
-        <img src="dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
+        <span class="img-circle elevation-2 bg-primary d-flex align-items-center justify-content-center font-weight-bold"
+              style="width: 2.1rem; height: 2.1rem; font-size: 1rem; color: #fff;"
+              title="<?php echo htmlspecialchars($nombreUsuario); ?>"><?php echo htmlspecialchars($inicialUsuario); ?></span>
       </div>
       <div class="info">
-        <a href="#" class="d-block"><?php echo htmlspecialchars($_SESSION['nombre']); ?></a>
+        <a href="#" class="d-block"><?php echo htmlspecialchars($nombreUsuario); ?></a>
       </div>
     </div>
 

@@ -1,5 +1,8 @@
 <?php
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX('infraestructura.especialidades');
 require_once '../config/db.php';
 
 $id = $_POST['idEspecialidad'] ?? null;

@@ -63,8 +63,10 @@ $(document).ready(function() {
         });
     }
 
-    // Inicializar la tabla al cargar la página
-    cargarTablaDispo();
+    // Inicializar la tabla al cargar la página (solo en Agendas Médicas)
+    if ($('#divTablaDisponibilidad').length) {
+        cargarTablaDispo();
+    }
 
     // Evento delegado para eliminar un horario configurado
     $(document).on('click', '.btnEliminarDispo', function() {

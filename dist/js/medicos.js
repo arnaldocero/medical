@@ -1,7 +1,7 @@
 $(document).ready(function () {
     const ajaxUrl = 'ajax/medicos_action.php';
 
-    // 1. Inicialización de DataTable con mapeo de campos reales
+    // 1. Inicialización de DataTable
     const tabla = $('#tablaMedicos').DataTable({
         "ajax": {
             "url": ajaxUrl,
@@ -19,8 +19,9 @@ $(document).ready(function () {
                 "data": null,
                 "orderable": false,
                 "render": function (data, type, row) {
+                    // SE CAMBIARON LAS CLASES PARA EVITAR COLISIONES CON OTROS MÓDULOS
                     return `
-                        <button class="btn btn-warning btn-sm btnEditar shadow-sm" 
+                        <button class="btn btn-warning btn-sm btnEditarMedico shadow-sm" 
                             data-id="${row.usuario_id}" 
                             data-nombre="${row.medico_nombre}"
                             data-email="${row.medico_email}"
@@ -32,7 +33,7 @@ $(document).ready(function () {
                             data-experiencia="${row.anos_experiencia || 0}">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-danger btn-sm btnEliminar shadow-sm" data-id="${row.usuario_id}">
+                        <button class="btn btn-danger btn-sm btnEliminarMedico shadow-sm" data-id="${row.usuario_id}">
                             <i class="fas fa-trash"></i>
                         </button>
                     `;
@@ -46,38 +47,24 @@ $(document).ready(function () {
 
     // 2. Control de estado para ventana modal en modo Registro
     $('#btnNuevoMedico').on('click', function() {
-        // CORREGIDO: Validación previa para evitar caídas de script si se comparte con pacientes.js
         if ($('#formMedico').length) {
             $('#formMedico')[0].reset();
         }
-        $('#action').val('registrar');
+        $('#actionMedico').val('registrar');
         $('#usuario_id').val('');
-        $('#modalTitle').html('<i class="fas fa-user-md"></i> Registrar Médico');
+        $('#modalTitleMedico').html('<i class="fas fa-user-md"></i> Registrar Médico');
         $('#password').attr('required', true);
         $('#passHelp').addClass('d-none');
     });
 
-    // 3. Carga de atributos en el modo Edición
-    $('#tablaMedicos').on('click', '.btnEditar', function () {
-        const id = $(this).data('id');
-        
-        $('#action').val('editar');
+    // 3. Carga de atributos en el modo Edición usando la clase aislada
+    $('#tablaMedicos').on('click', '.btnEditarMedico', function () {
+        const id = $(this).data('id');$('#actionMedico').val('editar');
         $('#usuario_id').val(id);
-        $('#nombre').val($(this).data('nombre'));
-        $('#email').val($(this).data('email'));
-        $('#usuario').val($(this).data('user'));
-        $('#rol_id').val($(this).data('rol'));
-        $('#licencia_medica').val($(this).data('licencia'));
-        $('#especialidad_id').val($(this).data('especialidad'));
-        $('#universidad_egreso').val($(this).data('universidad'));
-        $('#anos_experiencia').val($(this).data('experiencia'));
-        
-        // Contraseña opcional en edición
-        $('#password').attr('required', false).val('');
+        $('#nombre').val($(this).data('nombre'));$('#email').val($(this).data('email'));$('#usuario').val($(this).data('user'));$('#rol_id').val($(this).data('rol'));$('#licencia_medica').val($(this).data('licencia'));$('#especialidad_id').val($(this).data('especialidad'));$('#universidad_egreso').val($(this).data('universidad'));$('#anos_experiencia').val($(this).data('experiencia'));$('#password').attr('required', false).val('');
         $('#passHelp').removeClass('d-none');
-        $('#modalTitle').html('<i class="fas fa-user-edit"></i> Modificar Médico');
+        $('#modalTitleMedico').html('<i class="fas fa-user-edit"></i> Modificar Médico');
         
-        // Despliega el modal de manera explícita
         $('#modalMedico').modal('show');
     });
 
@@ -106,8 +93,8 @@ $(document).ready(function () {
         });
     });
 
-    // 5. Gestión de bajas de personal
-    $('#tablaMedicos').on('click', '.btnEliminar', function () {
+    // 5. Gestión de bajas de personal usando la clase aislada
+    $('#tablaMedicos').on('click', '.btnEliminarMedico', function () {
         const id = $(this).data('id');
 
         Swal.fire({

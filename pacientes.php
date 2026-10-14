@@ -108,7 +108,8 @@ try {
                                     <i class="fas fa-folder-open"></i>
                                 </a>
 
-                                <button class="btn btn-warning btn-sm btnEditar shadow-sm" 
+                                <!-- CLASE MODIFICADA: btnEditarPaciente -->
+                                <button class="btn btn-warning btn-sm btnEditarPaciente shadow-sm" 
                                         data-id="<?= $p['id'] ?>" 
                                         data-uid="<?= $p['usuario_id'] ?>"
                                         data-nombre="<?= htmlspecialchars($p['nombre']) ?>" 
@@ -127,7 +128,9 @@ try {
                                         data-emertel="<?= htmlspecialchars($p['contacto_emergencia_telefono'] ?? '') ?>">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm btnEliminar shadow-sm" 
+                                
+                                <!-- CLASE MODIFICADA: btnEliminarPaciente -->
+                                <button class="btn btn-danger btn-sm btnEliminarPaciente shadow-sm" 
                                         data-id="<?= $p['id'] ?>" 
                                         data-uid="<?= $p['usuario_id'] ?>"
                                         data-nombre="<?= htmlspecialchars($p['nombre']) ?>">
@@ -148,7 +151,8 @@ try {
         <div class="modal-content">
             <form id="formPaciente">
                 <div class="modal-header bg-primary text-white">
-                    <h4 class="modal-title" id="modalTitle">Registrar Nuevo Paciente</h4>
+                    <!-- ID MODIFICADO: modalTitlePaciente -->
+                    <h4 class="modal-title" id="modalTitlePaciente">Registrar Nuevo Paciente</h4>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">

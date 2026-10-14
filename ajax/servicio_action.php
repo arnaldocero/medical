@@ -5,6 +5,9 @@ error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX('servicios.cups');
 
 // Validación de seguridad multi-inquilino
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) {

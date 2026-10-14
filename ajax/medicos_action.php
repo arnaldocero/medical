@@ -6,6 +6,9 @@ error_reporting(E_ALL);
 header('Content-Type: application/json; charset=utf-8');
 
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX('medicos.administrar');
 
 // 2. Control de sesión y clínica asignada
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) {

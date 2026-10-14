@@ -3,6 +3,9 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX(['financiero.facturar', 'financiero.historial']);
 
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) {
     echo json_encode(["status" => "error", "message" => "Acceso denegado."]);

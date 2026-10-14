@@ -10,7 +10,8 @@ require_once 'config/db.php';
 try {
     $stmtEsp = $pdo->query("SELECT id, nombre FROM especialidades WHERE estado = 1 ORDER BY nombre ASC");
     $especialidades = $stmtEsp->fetchAll(PDO::FETCH_ASSOC);
-    // Consulta de roles médicos disponibles (Roles creados para personal facultativo)
+    
+    // Consulta de roles médicos disponibles
     $stmtRolesMedicos = $pdo->query("
     SELECT id, nombre_rol 
     FROM roles_clinicas 
@@ -55,7 +56,7 @@ try {
                             </tr>
                         </thead>
                         <tbody>
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -67,11 +68,13 @@ try {
     <div class="modal-dialog modal-lg"> 
         <div class="modal-content">
             <form id="formMedico">
-                <input type="hidden" name="action" id="action" value="registrar">
+                <!-- Se mantiene el name="action" para el backend, pero el ID es único -->
+                <input type="hidden" name="action" id="actionMedico" value="registrar">
                 <input type="hidden" name="usuario_id" id="usuario_id" value="">
 
                 <div class="modal-header bg-primary text-white">
-                    <h4 class="modal-title" id="modalTitle"><i class="fas fa-user-md"></i> Registrar Médico</h4>
+                    <!-- ID de título único -->
+                    <h4 class="modal-title" id="modalTitleMedico"><i class="fas fa-user-md"></i> Registrar Médico</h4>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 
@@ -97,14 +100,14 @@ try {
                             <small id="passHelp" class="form-text text-muted d-none">Deje en blanco si no desea cambiarla.</small>
                         </div>
                         <div class="col-md-4 mb-2">
-                        <label>Rol Interno *</label>
-                        <select name="rol_id" id="rol_id" class="form-control" required>
-                            <option value="">Seleccione Rol...</option>
-                            <?php foreach($rolesMedicos as $rm): ?>
-                                <option value="<?= $rm['id'] ?>"><?= htmlspecialchars($rm['nombre_rol']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                            <label>Rol Interno *</label>
+                            <select name="rol_id" id="rol_id" class="form-control" required>
+                                <option value="">Seleccione Rol...</option>
+                                <?php foreach($rolesMedicos as $rm): ?>
+                                    <option value="<?= $rm['id'] ?>"><?= htmlspecialchars($rm['nombre_rol']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="col-12 mt-3 px-0">
@@ -119,6 +122,7 @@ try {
                         </div>
                         <div class="col-md-4 mb-2">
                             <label>Especialidad Principal *</label>
+                            <!-- Esta variable viene de la sesión, no necesita ID porque no muta en el JS -->
                             <input type="hidden" name="clinica_id" value="<?= $_SESSION['clinica'] ?? '' ?>">
                             <select name="especialidad_id" id="especialidad_id" class="form-control" required>
                                 <option value="">Seleccione una especialidad...</option>
@@ -148,3 +152,4 @@ try {
 </div>
 
 <?php include 'layout/footer.php'; ?>
+<!-- Llama al script al final para garantizar que escuche los eventos correctos -->

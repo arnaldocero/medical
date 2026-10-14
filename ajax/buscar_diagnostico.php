@@ -1,5 +1,8 @@
 <?php
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX(['medico.panel', 'farmacia.crear_formula', 'diagnosticos.cie10']);
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['id'])) {

@@ -1,5 +1,8 @@
 <?php
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX(['medico.panel', 'pacientes.gestionar']);
 
 // 1. Validar seguridad de sesión
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) {

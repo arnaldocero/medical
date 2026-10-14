@@ -54,9 +54,11 @@ $(document).ready(function() {
         });
     }
 
-    // Ejecución inicial y bucle repetitivo cada 5 segundos
-    cargarPacientesAgenda();
-    setInterval(cargarPacientesAgenda, 5000);
+    // Ejecución inicial y bucle repetitivo cada 5 segundos (solo en el Panel Médico)
+    if ($('#tbodyPacientesMedico').length) {
+        cargarPacientesAgenda();
+        setInterval(cargarPacientesAgenda, 5000);
+    }
 
     // 2. LOGICA PARA EL BOTÓN DE LLAMAR (Usando delegación de eventos)
     $(document).on('click', '.btnLlamar', function() {

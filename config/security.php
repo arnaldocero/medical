@@ -10,6 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
  * Carga todos los permisos del rol del usuario en la sesión.
  * Llama a esta función inmediatamente después de que el usuario inicie sesión con éxito.
  */
+
 function cargarPermisosUsuario($pdo, $rol_id) {
     $_SESSION['permisos'] = [];
     try {
@@ -60,14 +61,40 @@ function requerirPermiso($permisoSlug) {
 }
 
 /**
+ * Protección AJAX: exige una sesión activa (usuario y clínica).
+ * Responde 401 en JSON y detiene la ejecución si la sesión no es válida.
+ */
+function requerirSesionAJAX() {
+    if (!isset($_SESSION['id'], $_SESSION['clinica'])) {
+        header('Content-Type: application/json', true, 401);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Sesión expirada. Inicie sesión nuevamente.'
+        ]);
+        exit();
+    }
+}
+
+/**
  * Variante de protección exclusiva para peticiones AJAX / API.
- * Retorna JSON estructurado y detiene la ejecución para no exponer lógica interna.
- * 
- * @param string $permisoSlug El slug del permiso requerido.
+ * Exige sesión activa y el permiso indicado. Retorna JSON estructurado
+ * y detiene la ejecución para no exponer lógica interna.
+ *
+ * @param string|array $permisoSlug Slug requerido, o lista de slugs (basta con tener uno).
  */
 function requerirPermisoAJAX($permisoSlug) {
-    if (!tienePermiso($permisoSlug)) {
-        header('Content-Type: application/json', true, 430); // Código de estado personalizado o 403
+    requerirSesionAJAX();
+
+    $permitido = false;
+    foreach ((array) $permisoSlug as $slug) {
+        if (tienePermiso($slug)) {
+            $permitido = true;
+            break;
+        }
+    }
+
+    if (!$permitido) {
+        header('Content-Type: application/json', true, 403);
         echo json_encode([
             'status' => 'error',
             'message' => 'Acceso denegado: Carece de los privilegios necesarios para realizar esta acción.'

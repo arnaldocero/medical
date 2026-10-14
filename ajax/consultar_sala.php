@@ -1,11 +1,14 @@
 <?php
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX('sala.espera');
 require_once '../config/db.php';
 
 header('Content-Type: application/json');
 
-// Reemplaza con tu validación de clínica si la usas
-$clinica_id = $_SESSION['clinica'] ?? 1; 
+// Solo pacientes de la clínica del usuario en sesión
+$clinica_id = $_SESSION['clinica'];
 $hoy = date('Y-m-d');
 
 try {
@@ -15,11 +18,11 @@ try {
             INNER JOIN usuarios_clinicas p ON cm.paciente_id = p.id
             INNER JOIN usuarios_clinicas m ON cm.medico_id = m.id
             INNER JOIN consultorios con ON cm.consultorio_id = con.id
-            WHERE cm.fecha_cita = ? AND cm.estado IN ('En Sala', 'En Consulta')
+            WHERE cm.clinica_id = ? AND cm.fecha_cita = ? AND cm.estado IN ('En Sala', 'En Consulta')
             ORDER BY CASE WHEN cm.estado = 'En Consulta' THEN 1 ELSE 2 END, cm.hora_inicio ASC";
-            
+
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$hoy]);
+    $stmt->execute([$clinica_id, $hoy]);
     $pacientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Formatear datos

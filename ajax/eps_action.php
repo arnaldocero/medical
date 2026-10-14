@@ -5,6 +5,9 @@ error_reporting(E_ALL);
 header('Content-Type: application/json; charset=utf-8');
 
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX('financiero.eps');
 
 // Validación de seguridad de la sesión y existencia de la clínica activa
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) {

@@ -1,3 +1,17 @@
+<?php
+session_start();
+
+// Si ya hay sesión activa, o una cookie "Recordarme" válida, entrar directamente
+if (!isset($_SESSION['id']) && !empty($_COOKIE['c_remember'])) {
+    require_once 'config/db.php';
+    require_once 'config/auth.php';
+    restaurarSesionDesdeCookie($pdo);
+}
+if (isset($_SESSION['id'])) {
+    header("Location: index.php");
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -40,7 +54,7 @@
         <div class="row">
           <div class="col-8">
             <div class="icheck-primary">
-              <input type="checkbox" id="remember">
+              <input type="checkbox" id="remember" name="recordarme" value="1">
               <label for="remember">
                 Recordarme
               </label>
@@ -53,7 +67,7 @@
       </form>
 
       <p class="mb-1 mt-3">
-        <a href="forgot-password.html">Olvidé mi contraseña</a>
+        <a href="recuperar_password.php">Olvidé mi contraseña</a>
       </p>
     </div>
     </div>
@@ -74,7 +88,8 @@ $(document).ready(function() {
 
         const datos = {
             usuario: $('#usuario').val(),
-            password: $('#password').val()
+            password: $('#password').val(),
+            recordarme: $('#remember').is(':checked') ? 1 : 0
         };
 
         $.ajax({

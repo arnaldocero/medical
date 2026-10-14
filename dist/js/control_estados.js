@@ -17,8 +17,10 @@ $(document).ready(function() {
         cargarCitasControl();
     });
 
-    // Cargar la lista de manera automática al abrir la pantalla
-    cargarCitasControl();
+    // Cargar la lista de manera automática al abrir la pantalla (solo en Control de Estados)
+    if ($('#divTablaCitasControl').length) {
+        cargarCitasControl();
+    }
 
     // Evento Delegado: Detectar clics en botones de cambio de estado
     $(document).on('click', '.btnCambiarEstado', function() {

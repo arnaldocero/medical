@@ -1,19 +1,28 @@
 $(document).ready(function () {
-    // Inicializar DataTable
+    // 1. Inicializar DataTable con Responsividad y Control de Caché
     const tabla = $('#tablaPacientes').DataTable({
         "language": {
             "url": "https://cdn.datatables.net/plug-ins/1.13.5/i18n/es-ES.json"
-        }
+        },
+        "responsive": true, // Habilita la adaptación a móviles
+        "autoWidth": false, // Evita que la tabla fuerce el ancho
+        "scrollX": true     // Permite desplazamiento horizontal si hay demasiadas columnas
     });
 
-    // Abrir Modal en Modo CREACIÓN
-    $('#btnNuevoPaciente').on('click', function () {
-        $('#formPaciente')[0].reset();
+    // 2. Abrir Modal en Modo CREACIÓN
+    // Usamos delegación de eventos en 'document' para asegurar que funcione incluso si el DOM cambia
+    $(document).on('click', '#btnNuevoPaciente', function () {
+        console.log("Activado: Modal Nuevo Paciente"); 
+        
+        // Limpiamos el formulario solo si existe en el DOM
+        if ($('#formPaciente').length) {
+            $('#formPaciente')[0].reset();
+        }
         $('#idPacienteEdit').val('');
         $('#idUsuarioEdit').val('');
 
-        $('#modalTitle').text('Registrar Nuevo Paciente');
-        $('.modal-header').removeClass('bg-warning').addClass('bg-primary');
+        $('#modalTitlePaciente').text('Registrar Nuevo Paciente');
+        $('#modalPaciente .modal-header').removeClass('bg-warning').addClass('bg-primary');
         $('#btnGuardar').removeClass('btn-warning').addClass('btn-primary').text('Guardar Registro');
         
         $('#inputPassword').attr('required', true).attr('placeholder', '');
@@ -22,9 +31,14 @@ $(document).ready(function () {
         $('#modalPaciente').modal('show');
     });
 
-    // Abrir Modal en Modo EDICIÓN
-    $('#tablaPacientes').on('click', '.btnEditar', function () {
-        $('#formPaciente')[0].reset();
+    // 3. Abrir Modal en Modo EDICIÓN (Clase aislada para evitar Script Collision)
+    $('#tablaPacientes').on('click', '.btnEditarPaciente', function (e) {
+        e.preventDefault(); // Previene comportamientos por defecto del botón
+        console.log("Activado: Modal Editar Paciente"); 
+        
+        if ($('#formPaciente').length) {
+            $('#formPaciente')[0].reset();
+        }
 
         const id = $(this).data('id');
         const uid = $(this).data('uid');
@@ -32,14 +46,14 @@ $(document).ready(function () {
         $('#idPacienteEdit').val(id);
         $('#idUsuarioEdit').val(uid);
 
-        $('#modalTitle').text('Modificar Información del Paciente');
-        $('.modal-header').removeClass('bg-primary').addClass('bg-warning');
+        $('#modalTitlePaciente').text('Modificar Información del Paciente');
+        $('#modalPaciente .modal-header').removeClass('bg-primary').addClass('bg-warning');
         $('#btnGuardar').removeClass('btn-primary').addClass('btn-warning').text('Guardar Cambios');
         
         $('#inputPassword').removeAttr('required').attr('placeholder', 'Dejar en blanco para no modificar');
         $('#labelPassword').text('Contraseña (Opcional)');
 
-        // Inyección de campos
+        // Inyección de campos desde los data-attributes
         $('input[name="nombre"]').val($(this).data('nombre'));
         $('input[name="email"]').val($(this).data('email'));
         $('input[name="usuario"]').val($(this).data('user'));
@@ -60,9 +74,13 @@ $(document).ready(function () {
         $('#modalPaciente').modal('show');
     });
 
-    // Envío del Formulario (Crear o Editar)
+    // 4. Envío del Formulario (Crear o Editar)
     $('#formPaciente').on('submit', function (e) {
         e.preventDefault();
+
+        const btn = $('#btnGuardar');
+        const textoOriginal = btn.text();
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Procesando...');
 
         const esEdicion = $('#idPacienteEdit').val() !== '';
         const actionUrl = esEdicion ? 'ajax/pacientes_action.php?action=editar' : 'ajax/pacientes_action.php?action=crear';
@@ -83,16 +101,18 @@ $(document).ready(function () {
                     });
                 } else {
                     Swal.fire('Atención', res.message, 'warning');
+                    btn.prop('disabled', false).text(textoOriginal);
                 }
             },
             error: function () {
-                Swal.fire('Error Técnico', 'Ocurrió un problema en la petición con el servidor.', 'error');
+                Swal.fire('Error Técnico', 'Ocurrió un problema de red o de servidor.', 'error');
+                btn.prop('disabled', false).text(textoOriginal);
             }
         });
     });
 
-    // Desactivar / Eliminar Paciente
-    $('#tablaPacientes').on('click', '.btnEliminar', function () {
+    // 5. Desactivar / Eliminar Paciente (Clase aislada)
+    $('#tablaPacientes').on('click', '.btnEliminarPaciente', function () {
         const id = $(this).data('id');
         const uid = $(this).data('uid');
         const nombre = $(this).data('nombre');
@@ -130,12 +150,10 @@ $(document).ready(function () {
         });
     });
 
-    // Cargar Historial Clínico
+    // 6. Cargar Historial Clínico
     $('#tablaPacientes').on('click', '.btnHistorial', function () {
         const paciente_id = $(this).data('id');
-        const nombre = $(this).data('nombre');
-        
-        $('#lblNombrePacienteHistorial').text(nombre);
+        const nombre = $(this).data('nombre');$('#lblNombrePacienteHistorial').text(nombre);
         $('#contenedorHistorial').html('<div class="text-center my-4"><i class="fas fa-spinner fa-spin fa-2x text-indigo"></i><p class="mt-2">Cargando historial médico...</p></div>');
         $('#modalHistorialClinico').modal('show');
 
@@ -153,7 +171,7 @@ $(document).ready(function () {
         });
     });
 
-    // Imprimir o Exportar PDF
+    // 7. Imprimir o Exportar PDF
     $('#btnImprimirHistorial').on('click', function () {
         const nombrePaciente = $('#lblNombrePacienteHistorial').text();
         const contenidoHistorial = $('#contenedorHistorial').html();

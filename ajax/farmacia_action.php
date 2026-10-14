@@ -1,5 +1,8 @@
 <?php
 session_start();
+// Seguridad: sesión activa + permiso del módulo
+require_once __DIR__ . '/../config/security.php';
+requerirPermisoAJAX('farmacia.despachar');
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) {
     echo json_encode(['status' => 'error', 'message' => 'Sesión no válida.']);
     exit();

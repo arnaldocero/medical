@@ -9,9 +9,10 @@ requerirPermisoAJAX('usuarios.eliminar');
 
 if (isset($_POST['id'])) {
     // Usamos borrado lógico (estado = 0) para no romper la integridad referencial[cite: 27]
-    $stmt = $pdo->prepare("UPDATE usuarios_clinicas SET estado = 0 WHERE id = ?");
-    
-    if ($stmt->execute([$_POST['id']])) {
+    // Solo usuarios de la misma clínica del administrador en sesión
+    $stmt = $pdo->prepare("UPDATE usuarios_clinicas SET estado = 0 WHERE id = ? AND clinica_id = ?");
+
+    if ($stmt->execute([$_POST['id'], $_SESSION['clinica']])) {
         echo json_encode(['status' => 'success', 'message' => 'Usuario desactivado correctamente']);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Error al eliminar']);

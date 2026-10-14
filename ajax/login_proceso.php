@@ -1,12 +1,19 @@
 <?php
 session_start();
+header('Content-Type: application/json');
 require_once '../config/db.php';
-// Importamos el motor de seguridad para poder registrar los permisos en la sesión
-require_once '../config/security.php'; 
+// Motor de seguridad + utilidades de sesión / "Recordarme"
+require_once '../config/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $userOrEmail = $_POST['usuario'];
-    $password = $_POST['password'];
+    $userOrEmail = trim($_POST['usuario'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $recordarme = !empty($_POST['recordarme']);
+
+    if ($userOrEmail === '' || $password === '') {
+        echo json_encode(['status' => 'error', 'message' => 'Llene todos los campos.']);
+        exit();
+    }
 
     // Buscamos por usuario o email y que esté ACTIVO (estado = 1)
     $stmt = $pdo->prepare("SELECT * FROM usuarios_clinicas WHERE (usuario = ? OR email = ?) AND estado = 1 LIMIT 1");
@@ -14,14 +21,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $usuario = $stmt->fetch();
 
     if ($usuario && password_verify($password, $usuario['password'])) {
-        // Creamos la sesión básica
-        $_SESSION['id'] = $usuario['id'];
-        $_SESSION['nombre'] = $usuario['nombre'];
-        $_SESSION['rol'] = $usuario['rol_id'];
-        $_SESSION['clinica'] = $usuario['clinica_id'];
+        // Creamos la sesión y cargamos los permisos del rol
+        iniciarSesionUsuario($pdo, $usuario);
 
-        // Cargar los permisos en la sesión utilizando la función de tu security.php
-        cargarPermisosUsuario($pdo, $usuario['rol_id']);
+        // LÓGICA DE RECORDARME: cookie de 30 días con token rotativo
+        if ($recordarme) {
+            crearTokenRecordarme($pdo, $usuario['id']);
+        } else {
+            borrarTokenRecordarme($pdo, $usuario['id']);
+        }
 
         echo json_encode(['status' => 'success', 'message' => 'Acceso concedido']);
     } else {
