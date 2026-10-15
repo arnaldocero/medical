@@ -1,0 +1,7 @@
+# Configuración privada (credenciales)
+.env
+
+# Archivos subidos por los usuarios (adjuntos de pacientes)
+uploads/*
+!uploads/.htaccess
+!uploads/*/.htaccess
