@@ -22,7 +22,7 @@ $sql = "SELECT cm.id, cm.fecha_cita, cm.hora_inicio, cm.hora_fin, cm.estado, cm.
         INNER JOIN usuarios_clinicas m ON cm.medico_id = m.id
         INNER JOIN centros_medicos c ON cm.centro_id = c.id
         INNER JOIN consultorios con ON cm.consultorio_id = con.id
-        WHERE cm.clinica_id = ? AND cm.fecha_cita = ?";
+        WHERE cm.clinica_id = ? AND cm.fecha_cita = ? AND " . sqlEnSedes('cm.centro_id');
 
 $params = [$clinica_id, $fecha];
 

@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina([]);
 if (!isset($_SESSION['id'])) { 
     header("Location: login.php"); 
     exit(); 
@@ -36,6 +39,14 @@ if (tienePermiso('usuarios.administrar')) {
 
   <section class="content">
     <div class="container-fluid">
+      <?php if (!empty($_SESSION['security_error'])): ?>
+        <div class="alert alert-danger alert-dismissible">
+          <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+          <i class="icon fas fa-ban"></i> <?php echo htmlspecialchars($_SESSION['security_error']); ?>
+        </div>
+        <?php unset($_SESSION['security_error']); ?>
+      <?php endif; ?>
+
       <p class="mb-4">Bienvenido al sistema de gestión de la clínica. Seleccione una opción rápida para comenzar:</p>
       
       <div class="row">

@@ -34,7 +34,7 @@ try {
     // 4. Ejecutar la actualización resguardando la clínica actual
     $sql = "UPDATE citas_medicas 
             SET estado = ?, fecha_actualizacion = CURRENT_TIMESTAMP 
-            WHERE id = ? AND clinica_id = ?";
+            WHERE id = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id');
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$nuevo_estado, $cita_id, $clinica_id]);

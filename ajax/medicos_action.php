@@ -8,6 +8,7 @@ header('Content-Type: application/json; charset=utf-8');
 session_start();
 // Seguridad: sesión activa + permiso del módulo
 require_once __DIR__ . '/../config/security.php';
+require_once __DIR__ . '/../config/roles.php';
 requerirPermisoAJAX('medicos.administrar');
 
 // 2. Control de sesión y clínica asignada
@@ -49,6 +50,7 @@ try {
                   LEFT JOIN roles_clinicas r ON u.rol_id = r.id
                   LEFT JOIN especialidades e ON m.especialidad = e.id
                   WHERE u.clinica_id = ? AND u.estado = 1 AND m.estado_medico = 1
+                    AND " . sqlUsuarioEnSedes('u.id') . "
                   ORDER BY u.nombre ASC";
                   
         $stmt = $pdo->prepare($query);
@@ -66,6 +68,10 @@ try {
         $usuario = trim($_POST['usuario'] ?? '');
         $password = $_POST['password'] ?? '';
         $rol_id = intval($_POST['rol_id'] ?? 0);
+        if ($rol_id && !esRolMedico($rol_id)) {
+            echo json_encode(["status" => "error", "message" => "Rol no válido para un médico."]);
+            exit();
+        }
         $licencia_medica = trim($_POST['licencia_medica'] ?? '');
         $especialidad_id = intval($_POST['especialidad_id'] ?? 0);
         $universidad_egreso = trim($_POST['universidad_egreso'] ?? '');
@@ -75,6 +81,9 @@ try {
             echo json_encode(["status" => "warning", "message" => "Todos los campos con (*) y el rol son obligatorios."]);
             exit();
         }
+
+        // El médico nuevo queda asignado a la sede de trabajo actual
+        $sedeNuevo = sedeParaRegistrarAJAX();
 
         $pdo->beginTransaction();
 
@@ -104,6 +113,7 @@ try {
         ");
         $stmtUser->execute([$clinica_id, $rol_id, $nombre, $usuario, $email, $passHash]);
         $usuario_id = $pdo->lastInsertId();
+        asignarUsuarioASede($pdo, $usuario_id, $sedeNuevo);
 
         // 2. Insertar ficha técnica médica
         $stmtMedico = $pdo->prepare("
@@ -125,6 +135,10 @@ try {
         $usuario = trim($_POST['usuario'] ?? '');
         $password = $_POST['password'] ?? '';
         $rol_id = intval($_POST['rol_id'] ?? 0);
+        if ($rol_id && !esRolMedico($rol_id)) {
+            echo json_encode(["status" => "error", "message" => "Rol no válido para un médico."]);
+            exit();
+        }
         $licencia_medica = trim($_POST['licencia_medica'] ?? '');
         $especialidad_id = intval($_POST['especialidad_id'] ?? 0);
         $universidad_egreso = trim($_POST['universidad_egreso'] ?? '');
@@ -134,6 +148,9 @@ try {
             echo json_encode(["status" => "warning", "message" => "Faltan parámetros obligatorios para procesar la edición."]);
             exit();
         }
+
+        // Solo médicos de la sede de trabajo
+        validarUsuarioEnSedeAJAX($pdo, $usuario_id, 'El médico no pertenece a su sede de trabajo.');
 
         $pdo->beginTransaction();
 
@@ -194,6 +211,9 @@ try {
             echo json_encode(["status" => "error", "message" => "Identificador de usuario inválido."]);
             exit();
         }
+
+        // Solo médicos de la sede de trabajo
+        validarUsuarioEnSedeAJAX($pdo, $usuario_id, 'El médico no pertenece a su sede de trabajo.');
 
         $pdo->beginTransaction();
 

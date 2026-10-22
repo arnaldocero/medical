@@ -1,6 +1,9 @@
 <?php
 // imprimir_historial.php
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina(['pacientes.gestionar', 'medico.panel']);
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) {
     die("Acceso denegado.");
 }
@@ -21,7 +24,7 @@ $stmt = $pdo->prepare($sqlPac);
 $stmt->execute([$paciente_id]);
 $paciente = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$paciente) {
+if (!$paciente || !usuarioEnSedesVisibles($pdo, $paciente['usuario_id'])) {
     die("Paciente no encontrado.");
 }
 

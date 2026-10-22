@@ -37,6 +37,7 @@ try {
                   LIMIT 1";
                   
         $stmt = $pdo->prepare($query);
+        validarUsuarioEnSedeAJAX($pdo, $paciente_id, 'El paciente no pertenece a su sede de trabajo.');
         $stmt->execute([$paciente_id, $clinica_id]);
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -91,6 +92,12 @@ try {
             exit();
         }
 
+        // La factura se emite en la sede de trabajo, con su resolución y a un paciente de esa sede
+        $centro_id = sedeParaRegistrarAJAX();
+        if (!usuarioEnSede($pdo, $paciente_id, $centro_id)) {
+            responderErrorSede('El paciente no está vinculado a esta sede.');
+        }
+
         try {
             // 1. Iniciamos la transacción atómica de manera inmediata
             $pdo->beginTransaction();
@@ -100,10 +107,10 @@ try {
             $stmtDian = $pdo->prepare("
                 SELECT id, prefijo, consecutivo_actual, numero_final, fecha_vencimiento, estado 
                 FROM dian_resoluciones 
-                WHERE id = ? AND clinica_id = ? 
+                WHERE id = ? AND clinica_id = ? AND centro_id = ?
                 FOR UPDATE
             ");
-            $stmtDian->execute([$dian_resolucion_id, $clinica_id]);
+            $stmtDian->execute([$dian_resolucion_id, $clinica_id, $centro_id]);
             $resolucion = $stmtDian->fetch(PDO::FETCH_ASSOC);
 
             // Validaciones estrictas de la resolución DIAN antes de quemar folios
@@ -139,10 +146,10 @@ try {
 
             // 4. Insertar Cabecera de Factura (Guardando la relación a la resolución que la generó)
             // Agregamos la columna 'dian_resolucion_id' a la factura para trazabilidad y auditorías futuras
-            $queryFactura = "INSERT INTO facturas (clinica_id, dian_resolucion_id, paciente_id, contrato_id, numero_factura, subtotal, total, metodo_pago, estado, fecha_emision) 
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'EMITIDA', NOW())";
+            $queryFactura = "INSERT INTO facturas (clinica_id, centro_id, dian_resolucion_id, paciente_id, contrato_id, numero_factura, subtotal, total, metodo_pago, estado, fecha_emision) 
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'EMITIDA', NOW())";
             $stmtFactura = $pdo->prepare($queryFactura);
-            $stmtFactura->execute([$clinica_id, $dian_resolucion_id, $paciente_id, $contrato_id, $numero_factura, $subtotal, $total, $metodo_pago]);
+            $stmtFactura->execute([$clinica_id, $centro_id, $dian_resolucion_id, $paciente_id, $contrato_id, $numero_factura, $subtotal, $total, $metodo_pago]);
             $factura_id = $pdo->lastInsertId();
 
 
@@ -204,8 +211,8 @@ try {
                                 INNER JOIN usuarios_clinicas u ON f.paciente_id = u.id
                                 LEFT JOIN contratos c ON f.contrato_id = c.id
                                 LEFT JOIN eps e ON c.eps_id = e.id
-                                WHERE f.id = ?");
-        $stmtF->execute([$factura_id]);
+                                WHERE f.id = ? AND f.clinica_id = ? AND " . sqlEnSedes('f.centro_id'));
+        $stmtF->execute([$factura_id, $clinica_id]);
         $factura = $stmtF->fetch(PDO::FETCH_ASSOC);
 
         if (!$factura) {

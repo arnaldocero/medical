@@ -106,7 +106,7 @@ $(document).ready(function() {
                         timer: 1500,
                         showConfirmButton: false
                     }).then(() => {
-                        window.location.href = 'index.php';
+                        window.location.href = response.redirect || 'index.php';
                     });
                 } else {
                     Swal.fire({

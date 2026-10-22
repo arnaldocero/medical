@@ -25,7 +25,7 @@ try {
         // 1. Carga Inicial de la pantalla
         case 'inicial':
             // Centros
-            $stmtCentros = $pdo->prepare("SELECT id, nombre_centro AS nombre FROM centros_medicos WHERE clinica_id = ? AND estado = 1 ORDER BY nombre_centro ASC");
+            $stmtCentros = $pdo->prepare("SELECT id, nombre_centro AS nombre FROM centros_medicos WHERE clinica_id = ? AND estado = 1 AND " . sqlEnSedes('id') . " ORDER BY nombre_centro ASC");
             $stmtCentros->execute([$clinica_id]);
             $centros = $stmtCentros->fetchAll(PDO::FETCH_ASSOC);
 
@@ -52,12 +52,13 @@ try {
 
         // 2. Obtener Médicos asociados a un Centro/Sede
         case 'medicos_por_centro':
-            $centro_id = intval($_GET['centro_id'] ?? 0);
+            $centro_id = validarSedeAJAX($_GET['centro_id'] ?? 0);
             
             // Buscar médicos con agenda/disponibilidad o asignados a ese centro
             $sqlMedicos = "SELECT DISTINCT u.id, u.nombre 
                            FROM usuarios_clinicas u 
                            INNER JOIN disponibilidad_medica dm ON u.id = dm.usuario_id 
+                           INNER JOIN asignacion_centros ac ON ac.usuario_id = u.id AND ac.centro_id = dm.centro_id
                            WHERE dm.centro_id = ? AND dm.clinica_id = ? AND dm.estado = 1
                            ORDER BY u.nombre ASC";
             $stmtMedicos = $pdo->prepare($sqlMedicos);
@@ -66,8 +67,9 @@ try {
 
             // Fallback: Si no hay médicos con disponibilidad activa, traer todos los médicos de la clínica
             if (empty($medicos)) {
-                $stmtMedicosAlt = $pdo->prepare("SELECT u.id, u.nombre FROM usuarios_clinicas u INNER JOIN datos_medicos dm ON u.id = dm.usuario_id WHERE u.clinica_id = ? AND u.estado = 1 ORDER BY u.nombre ASC");
-                $stmtMedicosAlt->execute([$clinica_id]);
+                // Solo médicos asignados a esta sede
+                $stmtMedicosAlt = $pdo->prepare("SELECT u.id, u.nombre FROM usuarios_clinicas u INNER JOIN datos_medicos dm ON u.id = dm.usuario_id INNER JOIN asignacion_centros ac ON ac.usuario_id = u.id AND ac.centro_id = ? WHERE u.clinica_id = ? AND u.estado = 1 ORDER BY u.nombre ASC");
+                $stmtMedicosAlt->execute([$centro_id, $clinica_id]);
                 $medicos = $stmtMedicosAlt->fetchAll(PDO::FETCH_ASSOC);
             }
 
@@ -76,7 +78,7 @@ try {
 
         // 3. Obtener Consultorios asignados y verificar agenda del día de hoy
         case 'consultorios_por_medico':
-            $centro_id = intval($_GET['centro_id'] ?? 0);
+            $centro_id = validarSedeAJAX($_GET['centro_id'] ?? 0);
             $medico_id = intval($_GET['medico_id'] ?? 0);
 
             // Mapear el día actual de la semana en español

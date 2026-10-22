@@ -9,5 +9,8 @@
     </IfModule>
 </FilesMatch>
 
+# Bloquear también el contenido de carpetas ocultas (.git/, .svn/...)
+RedirectMatch 403 "(^|/)\.(git|svn|hg)(/|$)"
+
 # No listar el contenido de las carpetas
 Options -Indexes

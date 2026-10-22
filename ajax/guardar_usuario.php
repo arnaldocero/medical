@@ -1,7 +1,9 @@
 <?php
 session_start();
 require_once '../config/db.php';
-require_once '../config/security.php'; 
+require_once '../config/security.php';
+require_once '../config/roles.php';
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     try {
@@ -13,6 +15,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             requerirPermisoAJAX('usuarios.editar');
         } else {
             requerirPermisoAJAX('usuarios.crear');
+        }
+
+        // --- SOLO PERSONAL DEL SISTEMA: médicos y pacientes se gestionan en sus propios módulos ---
+        if (!esRolPersonal($_POST['rol_id'] ?? 0)) {
+            echo json_encode(['status' => 'error', 'message' => 'Rol no permitido. Los médicos y pacientes se registran en Gestión Médicos y Gestión Pacientes.']);
+            exit();
+        }
+
+        // Los usuarios nuevos quedan asignados a la sede de trabajo actual
+        $sedeNuevo = $idUsuario ? null : sedeParaRegistrarAJAX();
+
+        if ($idUsuario) {
+            // El usuario a editar debe ser de la misma clínica y del personal del sistema
+            $stmtActual = $pdo->prepare("SELECT rol_id FROM usuarios_clinicas WHERE id = ? AND clinica_id = ?");
+            $stmtActual->execute([$idUsuario, $_SESSION['clinica']]);
+            $rolActual = $stmtActual->fetchColumn();
+
+            if ($rolActual === false || !esRolPersonal($rolActual) || !usuarioEnSedesVisibles($pdo, $idUsuario)) {
+                echo json_encode(['status' => 'error', 'message' => 'Este usuario no se puede editar desde Gestión Usuarios.']);
+                exit();
+            }
         }
 
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -31,15 +54,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // --- MODO EDICIÓN (UPDATE) ---
 
             // 1. Actualizar datos esenciales de autenticación
-            $sql1 = "UPDATE usuarios_clinicas SET rol_id = ?, nombre = ?, usuario = ?, email = ? WHERE id = ?";
+            $sql1 = "UPDATE usuarios_clinicas SET rol_id = ?, nombre = ?, usuario = ?, email = ? WHERE id = ? AND clinica_id = ?";
             $stmt1 = $pdo->prepare($sql1);
-            $stmt1->execute([$_POST['rol_id'], $_POST['nombre'], $_POST['usuario'], $_POST['email'], $idUsuario]);
+            $stmt1->execute([$_POST['rol_id'], $_POST['nombre'], $_POST['usuario'], $_POST['email'], $idUsuario, $_SESSION['clinica']]);
 
             // 2. Password opcional (solo se actualiza si el usuario la escribió)
             if (!empty($_POST['password'])) {
                 $passHash = password_hash($_POST['password'], PASSWORD_DEFAULT);
-                $sqlPass = "UPDATE usuarios_clinicas SET password = ? WHERE id = ?";
-                $pdo->prepare($sqlPass)->execute([$passHash, $idUsuario]);
+                $sqlPass = "UPDATE usuarios_clinicas SET password = ? WHERE id = ? AND clinica_id = ?";
+                $pdo->prepare($sqlPass)->execute([$passHash, $idUsuario, $_SESSION['clinica']]);
             }
 
             // 3. Actualización robusta del Perfil (¡Aquí estaba la falla!)
@@ -75,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt1->execute([$_SESSION['clinica'], $_POST['rol_id'], $_POST['nombre'], $_POST['usuario'], $_POST['email'], $passHash]);
 
             $idUsuarioCreado = $pdo->lastInsertId();
+            asignarUsuarioASede($pdo, $idUsuarioCreado, $sedeNuevo);
 
             // Insertar datos del perfil
             $sql2 = "INSERT INTO perfiles_usuarios (usuario_id, tipo_documento, documento_identidad, telefono, direccion, cargo, fecha_nacimiento, genero) 

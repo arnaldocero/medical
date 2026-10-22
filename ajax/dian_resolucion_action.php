@@ -17,7 +17,7 @@ $clinica_id = intval($_SESSION['clinica']);
 switch ($action) {
     case 'listar':
         try {
-            $stmt = $pdo->prepare("SELECT * FROM dian_resoluciones WHERE clinica_id = ? ORDER BY id DESC");
+            $stmt = $pdo->prepare("SELECT d.*, c.nombre_centro FROM dian_resoluciones d LEFT JOIN centros_medicos c ON c.id = d.centro_id WHERE d.clinica_id = ? AND " . sqlEnSedes('d.centro_id') . " ORDER BY d.id DESC");
             $stmt->execute([$clinica_id]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['status' => 'success', 'data' => $data]);
@@ -46,23 +46,26 @@ switch ($action) {
         $date->modify("+$vigencia_meses months");
         $fecha_vencimiento = $date->format('Y-m-d');
 
+        // Cada sede tiene su propia resolución
+        $centro_id = sedeParaRegistrarAJAX();
+
         try {
             $pdo->beginTransaction();
 
-            // Si se guarda como 'activa', inactivamos cualquier otra resolución previa de esta clínica
-            $stmtInactivar = $pdo->prepare("UPDATE dian_resoluciones SET estado = 'inactiva' WHERE clinica_id = ? AND estado = 'activa'");
-            $stmtInactivar->execute([$clinica_id]);
+            // Si se guarda como 'activa', inactivamos cualquier otra resolución previa de esta sede
+            $stmtInactivar = $pdo->prepare("UPDATE dian_resoluciones SET estado = 'inactiva' WHERE clinica_id = ? AND centro_id = ? AND estado = 'activa'");
+            $stmtInactivar->execute([$clinica_id, $centro_id]);
 
             $sql = "INSERT INTO dian_resoluciones 
-                    (clinica_id, numero_resolucion, prefijo, numero_inicial, numero_final, consecutivo_actual, fecha_resolucion, vigencia_meses, fecha_vencimiento, clave_tecnica, estado) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activa')";
+                    (clinica_id, centro_id, numero_resolucion, prefijo, numero_inicial, numero_final, consecutivo_actual, fecha_resolucion, vigencia_meses, fecha_vencimiento, clave_tecnica, estado) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activa')";
             
             // Consecutivo actual inicia en (numero_inicial - 1) para que el primer tiquete tome el número inicial exacto
             $consecutivo_inicial = $numero_inicial - 1;
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $clinica_id, $numero_resolucion, $prefijo, $numero_inicial, 
+                $clinica_id, $centro_id, $numero_resolucion, $prefijo, $numero_inicial, 
                 $numero_final, $consecutivo_inicial, $fecha_resolucion, 
                 $vigencia_meses, $fecha_vencimiento, $clave_tecnica
             ]);
@@ -84,13 +87,18 @@ switch ($action) {
             exit();
         }
 
+        // La resolución debe ser de su sede de trabajo
+        $stmtSede = $pdo->prepare("SELECT centro_id FROM dian_resoluciones WHERE id = ? AND clinica_id = ?");
+        $stmtSede->execute([$id, $clinica_id]);
+        $centro_res = validarSedeAJAX($stmtSede->fetchColumn());
+
         try {
             $pdo->beginTransaction();
 
             if ($nuevo_estado === 'activa') {
-                // Desactivar el resto primero
-                $stmtInactivar = $pdo->prepare("UPDATE dian_resoluciones SET estado = 'inactiva' WHERE clinica_id = ? AND estado = 'activa'");
-                $stmtInactivar->execute([$clinica_id]);
+                // Desactivar el resto de resoluciones de la misma sede
+                $stmtInactivar = $pdo->prepare("UPDATE dian_resoluciones SET estado = 'inactiva' WHERE clinica_id = ? AND centro_id = ? AND estado = 'activa'");
+                $stmtInactivar->execute([$clinica_id, $centro_res]);
             }
 
             $stmt = $pdo->prepare("UPDATE dian_resoluciones SET estado = ? WHERE id = ? AND clinica_id = ?");

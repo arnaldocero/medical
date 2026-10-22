@@ -11,6 +11,14 @@ $nombre = $_POST['nombre_consultorio'];
 $tipo = $_POST['tipo'];
 $clinica_id = $_SESSION['clinica'];
 
+// La sede destino debe ser de su sede de trabajo; al editar, el consultorio también
+validarSedeAJAX($centro_id);
+if (!empty($id)) {
+    $stmtSede = $pdo->prepare("SELECT centro_id FROM consultorios WHERE id = ? AND clinica_id = ?");
+    $stmtSede->execute([$id, $clinica_id]);
+    validarSedeAJAX($stmtSede->fetchColumn());
+}
+
 try {
     if (empty($id)) {
         $stmt = $pdo->prepare("INSERT INTO consultorios (clinica_id, centro_id, nombre_consultorio, tipo) VALUES (?, ?, ?, ?)");

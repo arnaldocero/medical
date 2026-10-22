@@ -26,6 +26,7 @@ try {
             INNER JOIN usuarios_clinicas p ON cm.paciente_id = p.id
             INNER JOIN consultorios con ON cm.consultorio_id = con.id
             WHERE cm.medico_id = ? AND cm.fecha_cita = ? AND cm.estado IN ('En Sala', 'En Consulta')
+              AND " . sqlEnSedes('cm.centro_id') . "
             ORDER BY cm.hora_inicio ASC
         ");
         $stmt->execute([$medico_id, $hoy]);
@@ -48,7 +49,7 @@ try {
             exit;
         }
 
-        $sql = "UPDATE citas_medicas SET estado = 'En Consulta' WHERE id = ? AND medico_id = ?";
+        $sql = "UPDATE citas_medicas SET estado = 'En Consulta' WHERE id = ? AND medico_id = ? AND " . sqlEnSedes('centro_id');
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$cita_id, $_SESSION['id']]);
 

@@ -1,5 +1,8 @@
 <?php
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina(['pacientes.gestionar', 'medico.panel']);
 if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 
 include 'layout/header.php';
@@ -21,9 +24,9 @@ $stmt = $pdo->prepare("
     SELECT u.id, u.nombre, pd.documento_identidad, pd.fecha_nacimiento, pd.genero
     FROM usuarios_clinicas u
     INNER JOIN pacientes_datos pd ON u.id = pd.usuario_id
-    WHERE u.id = ?
+    WHERE u.id = ? AND u.clinica_id = ? AND " . sqlUsuarioEnSedes('u.id') . "
 ");
-$stmt->execute([$paciente_id]);
+$stmt->execute([$paciente_id, $_SESSION['clinica']]);
 $paciente = $stmt->fetch();
 
 if (!$paciente) {

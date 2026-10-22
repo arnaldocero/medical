@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('farmacia.crear_formula');
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) { header("Location: login.php"); exit(); }
 include 'layout/header.php'; 
 include 'layout/nav.php'; 
@@ -37,7 +40,7 @@ include 'layout/sidebar.php';
                                             SELECT pd.id AS paciente_datos_id, pd.documento_identidad, uc.nombre 
                                             FROM pacientes_datos pd
                                             INNER JOIN usuarios_clinicas uc ON pd.usuario_id = uc.id
-                                            WHERE uc.clinica_id = ? AND uc.estado = 1
+                                            WHERE uc.clinica_id = ? AND uc.estado = 1 AND " . sqlUsuarioEnSedes('uc.id') . "
                                         ");
                                         $stmtP->execute([$_SESSION['clinica']]);
                                         while($p = $stmtP->fetch(PDO::FETCH_ASSOC)) {

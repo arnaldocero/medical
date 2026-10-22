@@ -1,5 +1,8 @@
 <?php
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('medico.panel');
 if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 
 include 'layout/header.php';
@@ -40,7 +43,7 @@ $stmt = $pdo->prepare("
     INNER JOIN pacientes_datos pd ON p.id = pd.usuario_id
     INNER JOIN datos_medicos dm ON cm.medico_id = dm.usuario_id
     INNER JOIN especialidades esp ON dm.especialidad = esp.id
-    WHERE cm.id = ? AND cm.medico_id = ?
+    WHERE cm.id = ? AND cm.medico_id = ? AND " . sqlEnSedes('cm.centro_id') . "
 ");
 $stmt->execute([$cita_id, $_SESSION['id']]);
 $datos = $stmt->fetch();
@@ -56,11 +59,68 @@ $cumpleanos = new DateTime($datos['fecha_nacimiento']);
 $hoy = new DateTime();
 $edad = $hoy->diff($cumpleanos)->y;
 
-// Bandera de control: Verifica si la especialidad contiene la palabra "odontologia" u "odontologo"
-$es_odontologo = (isset($datos['nombre']) && strripos($datos['nombre'], 'odontolog') !== false);
+// 2. FORMATO DE HISTORIA CLÍNICA: los asignados al médico (o el predeterminado de la clínica)
+require_once 'config/formatos.php';
+$formatosMedico = formatosDelMedico($pdo, $_SESSION['id'], $_SESSION['clinica']);
+$idsFormatos = array_map('intval', array_column($formatosMedico, 'id'));
+$formatoElegido = intval($_GET['formato_id'] ?? 0);
 
-// NUEVO: Bandera de control para Oftalmología u Optometría
-$es_optometra = (isset($datos['nombre']) && (strripos($datos['nombre'], 'oftalmolog') !== false || strripos($datos['nombre'], 'optometr') !== false));
+if (empty($formatosMedico)) {
+    echo "<div class='content-wrapper'><div class='p-4'><div class='alert alert-warning'><i class='fas fa-exclamation-triangle'></i> No tiene formatos de historia clínica asignados. Solicite al administrador que le asigne uno en <strong>Formatos de Historia</strong>.</div>
+          <a href='panel_medico.php' class='btn btn-secondary'><i class='fas fa-arrow-left'></i> Volver</a></div></div>";
+    include 'layout/footer.php';
+    exit();
+}
+
+if (!in_array($formatoElegido, $idsFormatos, true)) {
+    if (count($formatosMedico) === 1) {
+        $formatoElegido = $idsFormatos[0];
+    } else {
+        // Varios formatos asignados: el médico elige con cuál atender ?>
+        <div class="content-wrapper">
+            <section class="content-header">
+                <div class="container-fluid">
+                    <h1><i class="fas fa-file-medical text-success"></i> Seleccione el formato de atención</h1>
+                    <p class="text-muted mb-0">Paciente: <strong class="text-uppercase"><?= htmlspecialchars($datos['paciente']) ?></strong></p>
+                </div>
+            </section>
+            <section class="content">
+                <div class="container-fluid">
+                    <div class="row">
+                        <?php foreach ($formatosMedico as $f): $secs = normalizarSecciones($f['secciones']); ?>
+                            <div class="col-md-4">
+                                <a href="historia_clinica.php?cita_id=<?= intval($cita_id) ?>&formato_id=<?= intval($f['id']) ?>" class="card card-outline card-success shadow-sm text-dark" style="text-decoration:none;">
+                                    <div class="card-body">
+                                        <h5 class="text-success font-weight-bold"><i class="fas fa-file-signature"></i> <?= htmlspecialchars($f['nombre']) ?></h5>
+                                        <p class="text-muted small mb-2"><?= htmlspecialchars($f['descripcion'] ?? '') ?></p>
+                                        <?php foreach ($secs as $s): ?>
+                                            <span class="badge badge-light border mb-1"><i class="fas <?= SECCIONES_FORMATO[$s][1] ?>"></i> <?= htmlspecialchars(SECCIONES_FORMATO[$s][0]) ?></span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </a>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <a href="panel_medico.php" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver al panel</a>
+                </div>
+            </section>
+        </div>
+        <?php
+        include 'layout/footer.php';
+        exit();
+    }
+}
+
+$formato = obtenerFormato($pdo, $formatoElegido, $_SESSION['clinica']);
+
+// Secciones visibles según el formato
+$ver_signos      = formatoTieneSeccion($formato, 'signos_vitales');
+$ver_examen      = formatoTieneSeccion($formato, 'examen_fisico');
+$ver_formula     = formatoTieneSeccion($formato, 'plan_formula');
+$ver_anexos      = formatoTieneSeccion($formato, 'anexos');
+$es_odontologo   = formatoTieneSeccion($formato, 'odontograma');
+$es_optometra    = formatoTieneSeccion($formato, 'vision');
+$campos_formato  = $formato['campos'];
 ?>
 
 <link rel="stylesheet" href="plugins/select2/css/select2.min.css">
@@ -142,6 +202,10 @@ $es_optometra = (isset($datos['nombre']) && (strripos($datos['nombre'], 'oftalmo
             <div class="row mb-2">
                 <div class="col-sm-6">
                     <h1><i class="fas fa-file-medical text-success"></i> Consulta Médica Activa</h1>
+                    <span class="badge badge-success p-2"><i class="fas fa-file-signature"></i> <?= htmlspecialchars($formato['nombre']) ?></span>
+                    <?php if (count($formatosMedico) > 1): ?>
+                        <a href="historia_clinica.php?cita_id=<?= intval($cita_id) ?>" class="small ml-2"><i class="fas fa-exchange-alt"></i> Cambiar formato</a>
+                    <?php endif; ?>
                 </div>
                 <div class="col-sm-6 text-right">
                     <a href="panel_medico.php" class="btn btn-secondary shadow-sm">
@@ -185,6 +249,7 @@ $es_optometra = (isset($datos['nombre']) && (strripos($datos['nombre'], 'oftalmo
                 <input type="hidden" name="cita_id" value="<?= $datos['cita_id'] ?>">
                 <input type="hidden" name="paciente_id" value="<?= $datos['paciente_id'] ?>">
                 <input type="hidden" name="odontograma_json" id="odontograma_json" value="[]">
+                <input type="hidden" name="formato_id" value="<?= intval($formato['id']) ?>">
 
                 <div class="card card-success card-tabs shadow">
                     <div class="card-header p-0 pt-1">
@@ -192,18 +257,29 @@ $es_optometra = (isset($datos['nombre']) && (strripos($datos['nombre'], 'oftalmo
                             <li class="nav-item">
                                 <a class="nav-link active" id="motivo-tab" data-toggle="pill" href="#tab-motivo" role="tab"><i class="fas fa-comment-medical"></i> Motivo y Anamnesis</a>
                             </li>
+                            <?php if ($ver_signos): ?>
                             <li class="nav-item">
                                 <a class="nav-link" id="signos-tab" data-toggle="pill" href="#tab-signos" role="tab"><i class="fas fa-heartbeat"></i> Signos Vitales</a>
                             </li>
+                            <?php endif; ?>
+                            <?php if (!empty($campos_formato)): ?>
+                            <li class="nav-item">
+                                <a class="nav-link" id="campos-tab" data-toggle="pill" href="#tab-campos" role="tab"><i class="fas fa-list-ul text-success"></i> <?= htmlspecialchars($formato['nombre']) ?></a>
+                            </li>
+                            <?php endif; ?>
                             <li class="nav-item">
                                 <a class="nav-link" id="diagnostico-tab" data-toggle="pill" href="#tab-diagnostico" role="tab"><i class="fas fa-stethoscope"></i> Diagnóstico y Notas</a>
                             </li>
+                            <?php if ($ver_formula): ?>
                             <li class="nav-item">
                                 <a class="nav-link" id="tratamiento-tab" data-toggle="pill" href="#tab-prescription" role="tab"><i class="fas fa-pills"></i> Plan / Receta Médica</a>
                             </li>
+                            <?php endif; ?>
+                            <?php if ($ver_anexos): ?>
                             <li class="nav-item">
                                 <a class="nav-link" id="anexos-tab" data-toggle="pill" href="#tab-anexos" role="tab"><i class="fas fa-paperclip"></i> Anexos y Ayudas</a>
                             </li>
+                            <?php endif; ?>
                             <?php if ($es_odontologo): ?>
                             <li class="nav-item">
                                 <a class="nav-link" id="odontograma-tab" data-toggle="pill" href="#tab-odontograma" role="tab"><i class="fas fa-tooth text-warning"></i> Odontograma</a>
@@ -232,6 +308,7 @@ $es_optometra = (isset($datos['nombre']) && (strripos($datos['nombre'], 'oftalmo
                                 </div>
                             </div>
 
+                            <?php if ($ver_signos): ?>
                             <div class="tab-pane fade" id="tab-signos" role="tabpanel">
                                 <div class="row">
                                     <div class="col-md-3 form-group">
@@ -267,11 +344,55 @@ $es_optometra = (isset($datos['nombre']) && (strripos($datos['nombre'], 'oftalmo
                                 </div>
                             </div>
 
+                            <?php endif; ?>
+
+                            <?php if (!empty($campos_formato)): ?>
+                            <div class="tab-pane fade" id="tab-campos" role="tabpanel">
+                                <div class="alert alert-light border mb-3">
+                                    <i class="fas fa-file-signature text-success"></i> Campos del formato <strong><?= htmlspecialchars($formato['nombre']) ?></strong>.
+                                    Los marcados con <span class="text-danger">*</span> son obligatorios.
+                                </div>
+                                <div class="row">
+                                    <?php foreach ($campos_formato as $c):
+                                        $nombreCampo = 'campos_formato[' . intval($c['id']) . ']';
+                                        $req = intval($c['obligatorio']) === 1 ? 'required' : '';
+                                        $ancho = in_array($c['tipo'], ['parrafo'], true) ? 'col-md-12' : 'col-md-6'; ?>
+                                        <div class="<?= $ancho ?> form-group">
+                                            <label><?= htmlspecialchars($c['etiqueta']) ?> <?= $req ? '<span class="text-danger">*</span>' : '' ?></label>
+                                            <?php if ($c['tipo'] === 'parrafo'): ?>
+                                                <textarea class="form-control" name="<?= $nombreCampo ?>" rows="3" <?= $req ?>></textarea>
+                                            <?php elseif ($c['tipo'] === 'numero'): ?>
+                                                <input type="number" step="any" class="form-control" name="<?= $nombreCampo ?>" <?= $req ?>>
+                                            <?php elseif ($c['tipo'] === 'fecha'): ?>
+                                                <input type="date" class="form-control" name="<?= $nombreCampo ?>" <?= $req ?>>
+                                            <?php elseif ($c['tipo'] === 'si_no'): ?>
+                                                <select class="form-control" name="<?= $nombreCampo ?>" <?= $req ?>>
+                                                    <option value="">Seleccione...</option>
+                                                    <option value="SI">Sí</option>
+                                                    <option value="NO">No</option>
+                                                </select>
+                                            <?php elseif ($c['tipo'] === 'lista'): ?>
+                                                <select class="form-control" name="<?= $nombreCampo ?>" <?= $req ?>>
+                                                    <option value="">Seleccione...</option>
+                                                    <?php foreach (opcionesCampo($c) as $op): ?>
+                                                        <option value="<?= htmlspecialchars($op) ?>"><?= htmlspecialchars($op) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            <?php else: ?>
+                                                <input type="text" class="form-control" name="<?= $nombreCampo ?>" <?= $req ?>>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
                             <div class="tab-pane fade" id="tab-diagnostico" role="tabpanel">
+                                <?php if ($ver_examen): ?>
                                 <div class="form-group">
                                     <label>Examen Físico / Hallazgos</label>
                                     <textarea class="form-control" name="examen_physical" rows="3" placeholder="Resultados de la exploración física..."></textarea>
                                 </div>
+                                <?php endif; ?>
 
                                 <div class="form-group position-relative">
                                     <label>Diagnóstico Principal (Buscador CIE-10) <span class="text-danger">*</span></label>
@@ -286,6 +407,7 @@ $es_optometra = (isset($datos['nombre']) && (strripos($datos['nombre'], 'oftalmo
                                 </div>
                             </div>
 
+                            <?php if ($ver_formula): ?>
                             <div class="tab-pane fade" id="tab-prescription" role="tabpanel">
                                 <div class="row">
                                     <div class="col-md-12">
@@ -338,6 +460,9 @@ $es_optometra = (isset($datos['nombre']) && (strripos($datos['nombre'], 'oftalmo
                                 </div>
                             </div>
 
+                            <?php endif; ?>
+
+                            <?php if ($ver_anexos): ?>
                             <div class="tab-pane fade" id="tab-anexos" role="tabpanel">
                                 <div class="bg-light p-3 rounded mb-4 border">
                                     <div class="row">
@@ -385,6 +510,8 @@ $es_optometra = (isset($datos['nombre']) && (strripos($datos['nombre'], 'oftalmo
                                     </table>
                                 </div>
                             </div>
+
+                            <?php endif; ?>
 
                             <?php if ($es_odontologo): ?>
                             <div class="tab-pane fade" id="tab-odontograma" role="tabpanel">

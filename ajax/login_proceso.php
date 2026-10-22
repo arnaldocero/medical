@@ -24,6 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Creamos la sesión y cargamos los permisos del rol
         iniciarSesionUsuario($pdo, $usuario);
 
+        // SEDES: el personal sin sedes asignadas no puede entrar (el Admin siempre puede)
+        $sedes = obtenerSedesUsuario($pdo);
+        if (!esAdmin() && count($sedes) === 0) {
+            $_SESSION = [];
+            echo json_encode(['status' => 'error', 'message' => 'Su usuario no tiene sedes asignadas. Contacte al administrador.']);
+            exit();
+        }
+
         // LÓGICA DE RECORDARME: cookie de 30 días con token rotativo
         if ($recordarme) {
             crearTokenRecordarme($pdo, $usuario['id']);
@@ -31,7 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             borrarTokenRecordarme($pdo, $usuario['id']);
         }
 
-        echo json_encode(['status' => 'success', 'message' => 'Acceso concedido']);
+        // Una sola sede: entra directo. Varias (o Admin): paso 2, elegir sede
+        $redirigir = autoseleccionarSede($pdo) ? 'index.php' : 'seleccionar_sede.php';
+
+        echo json_encode(['status' => 'success', 'message' => 'Acceso concedido', 'redirect' => $redirigir]);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Credenciales incorrectas o usuario inactivo']);
     }

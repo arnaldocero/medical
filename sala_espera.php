@@ -1,6 +1,10 @@
-<?php 
-// Removida la comprobación de sesión para permitir el acceso público directo
-include 'layout/header.php'; 
+<?php
+session_start();
+// Seguridad: el TV debe iniciar sesión una vez con un usuario con permiso 'sala.espera'
+// y marcar "Recordarme"; si el navegador se reinicia, la sesión se restaura sola.
+require_once 'config/auth.php';
+protegerPagina('sala.espera');
+include 'layout/header.php';
 // Removidos nav.php y sidebar.php para maximizar el espacio de la pantalla y ocultar el menú del sistema
 require_once 'config/db.php';
 ?>

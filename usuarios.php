@@ -1,9 +1,13 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina(['usuarios.administrar', 'usuarios.ver']);
 if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 
 require_once 'config/db.php';
-require_once 'config/security.php'; 
+require_once 'config/security.php';
+require_once 'config/roles.php';
 
 // 1. Validar permisos
 requerirPermiso('usuarios.ver');
@@ -12,7 +16,9 @@ include 'layout/header.php';
 include 'layout/nav.php'; 
 include 'layout/sidebar.php'; 
 
-// CONSULTA: Traemos los datos de la base de datos
+// CONSULTA: Solo personal del sistema (los médicos y pacientes tienen su propia gestión)
+$rolesExcluidos = listaSqlRoles(array_merge(ROLES_MEDICOS, ROLES_PACIENTES));
+$rolesPersonal = obtenerRolesPersonal($pdo);
 $stmt = $pdo->prepare("
     SELECT u.id, u.nombre, u.usuario, u.email, u.estado, u.fecha_creacion, r.nombre_rol, u.rol_id,
            p.tipo_documento, p.documento_identidad, p.telefono, p.direccion, 
@@ -20,7 +26,9 @@ $stmt = $pdo->prepare("
     FROM usuarios_clinicas u
     LEFT JOIN roles_clinicas r ON u.rol_id = r.id
     LEFT JOIN perfiles_usuarios p ON u.id = p.usuario_id
-    WHERE u.clinica_id = ? AND u.rol_id NOT IN (2, 4, 5)
+    WHERE u.clinica_id = ? AND u.estado = 1 AND u.rol_id NOT IN ($rolesExcluidos)
+      AND " . sqlUsuarioEnSedes('u.id') . "
+    ORDER BY u.nombre ASC
 ");
 $stmt->execute([$_SESSION['clinica']]);
 $usuarios = $stmt->fetchAll();
@@ -142,10 +150,7 @@ $usuarios = $stmt->fetchAll();
                                 <label>Rol asignado *</label>
                                 <select class="form-control" name="rol_id" required>
                                     <option value="">Seleccione un rol...</option>
-                                    <?php 
-                                    $roles = $pdo->query("SELECT id, nombre_rol FROM roles_clinicas WHERE id NOT IN (2, 4)")->fetchAll();
-                                    foreach ($roles as $r): 
-                                    ?>
+                                    <?php foreach ($rolesPersonal as $r): ?>
                                         <option value="<?= $r['id'] ?>"><?= htmlspecialchars($r['nombre_rol']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
@@ -216,35 +221,6 @@ $usuarios = $stmt->fetchAll();
     </div>
 </div>
 
-<!-- ==========================================
-     MODAL: ASIGNAR SEDE (CENTRO MÉDICO)
-     ========================================== -->
-<div class="modal fade" id="modalAsignarSede" tabindex="-1" role="dialog" aria-labelledby="modalAsignarSedeLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="modalAsignarSedeLabel"><i class="fas fa-hospital"></i> Asignar Sedes / Centros</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form id="formAsignarSede">
-                <div class="modal-body">
-                    <input type="hidden" id="idUsuarioAsignar" name="idUsuarioAsignar">
-                    <p>Asignando centros médicos autorizados para:</p>
-                    <h5 class="text-primary mb-3" id="nombreUsuarioAsignar">---</h5>
-                    <div class="form-group">
-                        <label>Selecciona las sedes permitidas:</label>
-                        <div id="contenedorCentros" class="p-3 border rounded bg-light" style="max-height: 250px; overflow-y: auto;"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-info">Guardar Asignación</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<?php include 'layout/modal_sedes.php'; ?>
 
 <?php include 'layout/footer.php'; ?>

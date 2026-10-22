@@ -29,6 +29,15 @@ if(empty($usuario_id) || empty($especialidad_id) || empty($centro_id) || empty($
     exit;
 }
 
+// Sede, médico y consultorio deben corresponder a la sede de trabajo
+validarSedeAJAX($centro_id);
+if (!usuarioEnSede($pdo, $usuario_id, $centro_id)) {
+    responderErrorSede('El médico no está asignado a esta sede. Asígnelo desde Gestión Médicos.');
+}
+if (!consultorioEnSede($pdo, $consultorio_id, $centro_id)) {
+    responderErrorSede('El consultorio no pertenece a la sede seleccionada.');
+}
+
 // Validar que la hora de inicio sea menor a la hora de fin
 if (strtotime($hora_inicio) >= strtotime($hora_fin)) {
     echo json_encode(['status' => 'error', 'message' => 'La hora de inicio debe ser menor a la hora de fin']);

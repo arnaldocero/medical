@@ -1,12 +1,16 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('financiero.facturar');
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) { header("Location: login.php"); exit(); }
 
 require_once 'config/db.php';
 $clinica_id = intval($_SESSION['clinica']);
 
 // Precarga de Pacientes de la clínica filtrando estructuralmente por rol_id = 5
-$stmtPacientes = $pdo->prepare("SELECT id, nombre FROM usuarios_clinicas WHERE clinica_id = ? AND rol_id = 5 AND estado = 1 ORDER BY nombre ASC");
+require_once 'config/roles.php';
+$stmtPacientes = $pdo->prepare("SELECT u.id, u.nombre FROM usuarios_clinicas u WHERE u.clinica_id = ? AND u.rol_id IN (" . listaSqlRoles(ROLES_PACIENTES) . ") AND u.estado = 1 AND " . sqlUsuarioEnSedes('u.id') . " ORDER BY u.nombre ASC");
 $stmtPacientes->execute([$clinica_id]);
 $pacientes = $stmtPacientes->fetchAll(PDO::FETCH_ASSOC);
 
@@ -19,10 +23,11 @@ $servicios = $stmtServicios->fetchAll(PDO::FETCH_ASSOC);
 $stmtDian = $pdo->prepare("
     SELECT id, numero_resolucion, prefijo, consecutivo_actual, numero_final, fecha_vencimiento 
     FROM dian_resoluciones 
-    WHERE clinica_id = ? AND estado = 'activa' 
+    WHERE clinica_id = ? AND centro_id = ? AND estado = 'activa' 
     LIMIT 1
 ");
-$stmtDian->execute([$clinica_id]);
+// Cada sede factura con su propia resolución (en "Todas las sedes" no se factura)
+$stmtDian->execute([$clinica_id, sedeActual() ?? 0]);
 $resolucionActiva = $stmtDian->fetch(PDO::FETCH_ASSOC);
 
 include 'layout/header.php'; 
@@ -61,7 +66,11 @@ include 'layout/sidebar.php';
                         <?php else: ?>
                             <input type="hidden" id="dian_resolucion_id" value="">
                             <div class="alert alert-danger mb-0 p-2">
-                                <i class="fas fa-exclamation-triangle"></i> No hay una resolución DIAN activa configurada para esta clínica. No podrá facturar.
+                                <?php if (sedeActual() === null): ?>
+                                    <i class="fas fa-exclamation-triangle"></i> Está en "Todas las sedes". Cambie a una sede específica (menú superior) para facturar.
+                                <?php else: ?>
+                                    <i class="fas fa-exclamation-triangle"></i> No hay una resolución DIAN activa configurada para esta sede. No podrá facturar.
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
                     </div>

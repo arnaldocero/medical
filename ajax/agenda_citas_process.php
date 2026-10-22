@@ -18,7 +18,7 @@ $action = $_GET['action'] ?? '';
 switch ($action) {
 
     case 'obtener_consultorios':
-        $centro_id = $_GET['centro_id'] ?? '';
+        $centro_id = validarSedeAJAX($_GET['centro_id'] ?? 0);
         try {
             $stmt = $pdo->prepare("SELECT id, nombre_consultorio FROM consultorios WHERE centro_id = ? AND clinica_id = ? AND estado = 1");
             $stmt->execute([$centro_id, $clinica_id]);
@@ -40,6 +40,7 @@ switch ($action) {
                 echo json_encode(['status' => 'error', 'message' => 'Faltan parámetros de consulta']);
                 exit;
             }
+            validarSedeAJAX($centro_id);
     
             // VALIDACIÓN DE FECHA PASADA: Comparación estricta de formato de fecha Y-m-d
             $hoy = date('Y-m-d');
@@ -204,6 +205,18 @@ switch ($action) {
         $duracion       = $_POST['duracion_calculada'] ?? 20; 
         $valor_cita     = $_POST['valor_cita'] ?? 0;
         $motivo         = $_POST['motivo_consulta'] ?? '';
+
+        // Sede, paciente, médico y consultorio deben corresponder a la sede de la cita
+        validarSedeAJAX($centro_id);
+        if (!usuarioEnSede($pdo, $paciente_id, $centro_id)) {
+            responderErrorSede('El paciente no está vinculado a esta sede. Vincúlelo desde Gestión Pacientes.');
+        }
+        if (!usuarioEnSede($pdo, $medico_id, $centro_id)) {
+            responderErrorSede('El médico no está asignado a esta sede.');
+        }
+        if (!consultorioEnSede($pdo, $consultorio_id, $centro_id)) {
+            responderErrorSede('El consultorio no pertenece a la sede seleccionada.');
+        }
 
         $hora_inicio = date('H:i:s', strtotime($hora_inicio));
         $hora_fin = date('H:i:s', strtotime("+$duracion minutes", strtotime($hora_inicio)));

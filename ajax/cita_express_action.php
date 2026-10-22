@@ -31,6 +31,18 @@ if ($paciente_id === 0 || $medico_id === 0 || $centro_id === 0 || $servicio_id =
     exit();
 }
 
+// Sede, paciente, médico y consultorio deben corresponder a la sede de la atención
+validarSedeAJAX($centro_id);
+if (!usuarioEnSede($pdo, $paciente_id, $centro_id)) {
+    responderErrorSede('El paciente no está vinculado a esta sede. Vincúlelo desde Gestión Pacientes.');
+}
+if (!usuarioEnSede($pdo, $medico_id, $centro_id)) {
+    responderErrorSede('El médico no está asignado a esta sede.');
+}
+if ($consultorio_id && !consultorioEnSede($pdo, $consultorio_id, $centro_id)) {
+    responderErrorSede('El consultorio no pertenece a la sede seleccionada.');
+}
+
 try {
     date_default_timezone_set('America/Bogota');
     

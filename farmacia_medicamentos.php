@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('farmacia.medicamentos');
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) { header("Location: login.php"); exit(); }
 include 'layout/header.php'; 
 include 'layout/nav.php'; 

@@ -28,6 +28,7 @@ switch ($action) {
                 WHERE (pd.documento_identidad = ? OR f.id = ?)
                   AND f.estado = 'pendiente' -- Solo fórmulas sin entregar
                   AND uc.clinica_id = ?
+                  AND " . sqlEnSedes('f.centro_id') . "
                 LIMIT 1
             ");
             $stmt->execute([$busqueda, $busqueda, $_SESSION['clinica']]);
@@ -67,9 +68,10 @@ switch ($action) {
             $pdo->beginTransaction();
 
             // 1. Verificar que la fórmula siga pendiente
-            $stmtCheck = $pdo->prepare("SELECT estado FROM formulas_medicas WHERE id = ? FOR UPDATE");
-            $stmtCheck->execute([$formula_id]);
-            $estado = $stmtCheck->fetchColumn();
+            $stmtCheck = $pdo->prepare("SELECT estado, centro_id FROM formulas_medicas WHERE id = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id') . " FOR UPDATE");
+            $stmtCheck->execute([$formula_id, $_SESSION['clinica']]);
+            $formulaSede = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+            $estado = $formulaSede['estado'] ?? null;
 
             if ($estado !== 'PENDIENTE') {
                 throw new Exception("Esta fórmula ya fue procesada o no es válida.");
@@ -81,10 +83,11 @@ switch ($action) {
             $items = $stmtDetalle->fetchAll(PDO::FETCH_ASSOC);
 
             // 3. Descontar el stock y validar existencias
-            $stmtUpdateStock = $pdo->prepare("UPDATE medicamentos SET stock_actual = stock_actual - ? WHERE id = ? AND stock_actual >= ?");
+            // Se descuenta del inventario de la sede de la fórmula
+            $stmtUpdateStock = $pdo->prepare("UPDATE medicamentos SET stock_actual = stock_actual - ? WHERE id = ? AND stock_actual >= ? AND centro_id = ?");
             
             foreach ($items as $item) {
-                $stmtUpdateStock->execute([$item['cantidad_solicitada'], $item['medicamento_id'], $item['cantidad_solicitada']]);
+                $stmtUpdateStock->execute([$item['cantidad_solicitada'], $item['medicamento_id'], $item['cantidad_solicitada'], $formulaSede['centro_id']]);
                 
                 // Si ninguna fila se modificó, significa que no había stock suficiente
                 if ($stmtUpdateStock->rowCount() === 0) {

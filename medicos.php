@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('medicos.administrar');
 if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 
 include 'layout/header.php'; 
@@ -11,14 +14,9 @@ try {
     $stmtEsp = $pdo->query("SELECT id, nombre FROM especialidades WHERE estado = 1 ORDER BY nombre ASC");
     $especialidades = $stmtEsp->fetchAll(PDO::FETCH_ASSOC);
     
-    // Consulta de roles médicos disponibles
-    $stmtRolesMedicos = $pdo->query("
-    SELECT id, nombre_rol 
-    FROM roles_clinicas 
-    WHERE nombre_rol LIKE '%Medico%' OR id = 2 
-    ORDER BY nombre_rol ASC
-    ");
-    $rolesMedicos = $stmtRolesMedicos->fetchAll(PDO::FETCH_ASSOC);
+    // Roles médicos disponibles (clasificación central en config/roles.php)
+    require_once 'config/roles.php';
+    $rolesMedicos = obtenerRolesMedicos($pdo);
 } catch (Exception $e) {
     $especialidades = [];
 }
@@ -150,6 +148,8 @@ try {
         </div>
     </div>
 </div>
+
+<?php include 'layout/modal_sedes.php'; ?>
 
 <?php include 'layout/footer.php'; ?>
 <!-- Llama al script al final para garantizar que escuche los eventos correctos -->

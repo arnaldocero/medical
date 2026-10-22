@@ -15,7 +15,7 @@ $sql = "SELECT d.id, u.nombre as medico, e.nombre as especialidad,
         INNER JOIN especialidades e ON d.especialidad_id = e.id
         INNER JOIN centros_medicos cm ON d.centro_id = cm.id
         INNER JOIN consultorios con ON d.consultorio_id = con.id
-        WHERE d.clinica_id = ? AND d.estado = 1
+        WHERE d.clinica_id = ? AND d.estado = 1 AND " . sqlEnSedes('d.centro_id') . "
         ORDER BY d.id DESC";
 
 $stmt = $pdo->prepare($sql);

@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('citas.agendar');
 if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 
 include 'layout/header.php'; 
@@ -10,7 +13,8 @@ require_once 'config/db.php';
 $clinica_id = $_SESSION['clinica'];
 
 // 1. CONSULTA: Pacientes activos (Rol 5)
-$stmtPacientes = $pdo->prepare("SELECT id, nombre FROM usuarios_clinicas WHERE clinica_id = ? AND rol_id = 5 AND estado = 1 ORDER BY nombre ASC");
+require_once 'config/roles.php';
+$stmtPacientes = $pdo->prepare("SELECT u.id, u.nombre FROM usuarios_clinicas u WHERE u.clinica_id = ? AND u.rol_id IN (" . listaSqlRoles(ROLES_PACIENTES) . ") AND u.estado = 1 AND " . sqlUsuarioEnSedes('u.id') . " ORDER BY u.nombre ASC");
 $stmtPacientes->execute([$clinica_id]);
 $pacientes = $stmtPacientes->fetchAll();
 
@@ -20,13 +24,14 @@ $stmtMedicos = $pdo->prepare("
     FROM usuarios_clinicas u
     INNER JOIN datos_medicos dm ON u.id = dm.usuario_id
     WHERE u.clinica_id = ? AND dm.estado_medico = 1 AND u.estado = 1
+      AND " . sqlUsuarioEnSedes('u.id') . "
     ORDER BY u.nombre ASC
 ");
 $stmtMedicos->execute([$clinica_id]);
 $medicos = $stmtMedicos->fetchAll();
 
 // 3. CONSULTA: Sedes (Centros Médicos)
-$stmtCentros = $pdo->prepare("SELECT id, nombre_centro FROM centros_medicos WHERE clinica_id = ? AND estado = 1 ORDER BY nombre_centro ASC");
+$stmtCentros = $pdo->prepare("SELECT id, nombre_centro FROM centros_medicos WHERE clinica_id = ? AND estado = 1 AND " . sqlEnSedes('id') . " ORDER BY nombre_centro ASC");
 $stmtCentros->execute([$clinica_id]);
 $centros = $stmtCentros->fetchAll();
 ?>

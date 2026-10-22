@@ -40,7 +40,7 @@ if ($action === 'listar_atenciones') {
             INNER JOIN usuarios_clinicas uc_p ON pd.usuario_id = uc_p.id
             INNER JOIN usuarios_clinicas uc_m ON cm.medico_id = uc_m.id
             INNER JOIN diagnosticos cie ON hc.diagnostico_id = cie.id
-            WHERE cm.clinica_id = ? AND cm.fecha_cita BETWEEN ? AND ?
+            WHERE cm.clinica_id = ? AND " . sqlEnSedes('cm.centro_id') . " AND cm.fecha_cita BETWEEN ? AND ?
             ORDER BY cm.fecha_cita DESC, cm.hora_inicio DESC
         ");
         $stmt->execute([$_SESSION['clinica'], $fecha_inicio, $fecha_fin]);
@@ -86,9 +86,9 @@ if ($action === 'descargar_rips') {
         INNER JOIN pacientes_datos pd ON hc.paciente_id = pd.usuario_id
         INNER JOIN diagnosticos cie ON hc.diagnostico_id = cie.id
         INNER JOIN clientes_clinicas clinica ON cm.clinica_id = clinica.id
-        WHERE hc.id IN ($in_clause)
+        WHERE hc.id IN ($in_clause) AND cm.clinica_id = ? AND " . sqlEnSedes('cm.centro_id') . "
     ");
-    $stmt->execute($ids_array);
+    $stmt->execute(array_merge($ids_array, [$_SESSION['clinica']]));
     $atenciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($atenciones)) {

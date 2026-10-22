@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 session_start();
 // Seguridad: sesión activa + permiso del módulo
 require_once __DIR__ . '/../config/security.php';
+require_once __DIR__ . '/../config/roles.php';
 requerirPermisoAJAX('pacientes.gestionar');
 
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) {
@@ -18,10 +19,57 @@ require_once '../config/db.php';
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $clinica_id = intval($_SESSION['clinica']);
 
+/**
+ * Busca un paciente por documento: devuelve usuario_id, nombre y clinica_id, o null.
+ */
+function buscarPacientePorDocumento($pdo, $documento) {
+    $stmt = $pdo->prepare("SELECT p.id AS paciente_id, u.id AS usuario_id, u.nombre, u.clinica_id
+                           FROM pacientes_datos p
+                           INNER JOIN usuarios_clinicas u ON u.id = p.usuario_id
+                           WHERE p.documento_identidad = ? LIMIT 1");
+    $stmt->execute([$documento]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+/**
+ * Verifica que la ficha (pacientes_datos.id) sea de la clínica y de una sede visible.
+ * Devuelve el usuario_id del paciente o detiene la petición.
+ */
+function validarPacienteDatosAJAX($pdo, $idPaciente, $clinica_id) {
+    $stmt = $pdo->prepare("SELECT p.usuario_id FROM pacientes_datos p
+                           INNER JOIN usuarios_clinicas u ON u.id = p.usuario_id
+                           WHERE p.id = ? AND u.clinica_id = ?");
+    $stmt->execute([intval($idPaciente), $clinica_id]);
+    $usuarioId = $stmt->fetchColumn();
+    if ($usuarioId === false) {
+        responderErrorSede('Paciente no encontrado.', 404);
+    }
+    validarUsuarioEnSedeAJAX($pdo, $usuarioId, 'El paciente no pertenece a su sede de trabajo.');
+    return intval($usuarioId);
+}
+
 switch ($action) {
+
+    // Vincular a la sede actual un paciente ya registrado en otra sede de la clínica
+    case 'vincular':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $sedeNuevo = sedeParaRegistrarAJAX();
+            $existente = buscarPacientePorDocumento($pdo, trim($_POST['documento'] ?? ''));
+
+            if (!$existente || $existente['clinica_id'] != $clinica_id) {
+                echo json_encode(['status' => 'error', 'message' => 'Paciente no encontrado.']);
+                exit();
+            }
+
+            asignarUsuarioASede($pdo, $existente['usuario_id'], $sedeNuevo);
+            echo json_encode(['status' => 'success', 'message' => 'Paciente ' . $existente['nombre'] . ' vinculado a ' . $_SESSION['centro_nombre'] . '.']);
+        }
+        break;
 
     case 'crear':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Sede donde se registra el paciente (no se permite en "Todas las sedes")
+            $sedeNuevo = sedeParaRegistrarAJAX();
             try {
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 $pdo->beginTransaction();
@@ -31,6 +79,10 @@ switch ($action) {
                 $usuario = trim($_POST['usuario'] ?? '');
                 $password = $_POST['password'] ?? '';
                 $rol_id = intval($_POST['rol_id'] ?? 5);
+                if (!esRolPaciente($rol_id)) {
+                    echo json_encode(['status' => 'error', 'message' => 'Rol no válido para un paciente.']);
+                    exit();
+                }
                 $estado = intval($_POST['estado'] ?? 1);
 
                 $documento = trim($_POST['documento_identidad'] ?? '');
@@ -49,21 +101,31 @@ switch ($action) {
                     exit();
                 }
 
+                // Validar si el documento de identidad ya existe (antes que usuario/correo,
+                // para poder ofrecer la vinculación a esta sede de un paciente de otra sede)
+                $existente = buscarPacientePorDocumento($pdo, $documento);
+                if ($existente) {
+                    $pdo->rollBack();
+                    if ($existente['clinica_id'] != $clinica_id) {
+                        echo json_encode(['status' => 'warning', 'message' => 'El documento de identidad ya está registrado.']);
+                    } elseif (usuarioEnSedesVisibles($pdo, $existente['usuario_id'])) {
+                        echo json_encode(['status' => 'warning', 'message' => 'Este paciente ya está registrado en su sede: ' . $existente['nombre'] . '.']);
+                    } else {
+                        echo json_encode([
+                            'status'    => 'vincular',
+                            'message'   => 'El paciente ' . $existente['nombre'] . ' (documento ' . $documento . ') ya está registrado en otra sede. ¿Desea vincularlo a ' . ($_SESSION['centro_nombre'] ?? 'esta sede') . '? Se conservará su historia clínica.',
+                            'documento' => $documento
+                        ]);
+                    }
+                    exit();
+                }
+
                 // Validar si el usuario o email ya existen
                 $stmtCheck = $pdo->prepare("SELECT id FROM usuarios_clinicas WHERE (usuario = ? OR email = ?) LIMIT 1");
                 $stmtCheck->execute([$usuario, $email]);
                 if ($stmtCheck->fetch()) {
                     $pdo->rollBack();
                     echo json_encode(['status' => 'warning', 'message' => 'El nombre de usuario o correo ya existen.']);
-                    exit();
-                }
-
-                // Validar si el documento de identidad ya existe
-                $stmtCheckDoc = $pdo->prepare("SELECT id FROM pacientes_datos WHERE documento_identidad = ? LIMIT 1");
-                $stmtCheckDoc->execute([$documento]);
-                if ($stmtCheckDoc->fetch()) {
-                    $pdo->rollBack();
-                    echo json_encode(['status' => 'warning', 'message' => 'El documento de identidad ya está registrado.']);
                     exit();
                 }
 
@@ -75,6 +137,9 @@ switch ($action) {
                 $stmtUser->execute([$clinica_id, $rol_id, $nombre, $usuario, $email, $passHash, $estado]);
                 
                 $idUsuarioCreado = $pdo->lastInsertId();
+
+                // El paciente queda vinculado a la sede de trabajo actual
+                asignarUsuarioASede($pdo, $idUsuarioCreado, $sedeNuevo);
 
                 // 2. Insertar en pacientes_datos
                 $sqlPac = "INSERT INTO pacientes_datos 
@@ -117,11 +182,20 @@ switch ($action) {
                     throw new Exception("Identificadores de paciente inválidos para la edición.");
                 }
 
+                // La ficha debe ser de su sede y corresponder al usuario indicado
+                if (validarPacienteDatosAJAX($pdo, $idPaciente, $clinica_id) !== $idUsuario) {
+                    throw new Exception("Los datos del paciente no coinciden.");
+                }
+
                 $nombre = trim($_POST['nombre'] ?? '');
                 $email = trim($_POST['email'] ?? '');
                 $usuario = trim($_POST['usuario'] ?? '');
                 $password = $_POST['password'] ?? '';
                 $rol_id = intval($_POST['rol_id'] ?? 5);
+                if (!esRolPaciente($rol_id)) {
+                    echo json_encode(['status' => 'error', 'message' => 'Rol no válido para un paciente.']);
+                    exit();
+                }
                 $estado = intval($_POST['estado'] ?? 1);
 
                 $documento = trim($_POST['documento_identidad'] ?? '');
@@ -198,6 +272,10 @@ switch ($action) {
             $idUsuario  = intval($_POST['usuario_id'] ?? 0);
 
             if ($idPaciente && $idUsuario) {
+                if (validarPacienteDatosAJAX($pdo, $idPaciente, $clinica_id) !== $idUsuario) {
+                    echo json_encode(['status' => 'error', 'message' => 'Los datos del paciente no coinciden.']);
+                    exit();
+                }
                 try {
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                     $pdo->beginTransaction();
@@ -227,11 +305,16 @@ switch ($action) {
                 exit();
             }
 
+            // Solo pacientes vinculados a la sede de trabajo (la historia incluye todas sus sedes)
+            validarPacienteDatosAJAX($pdo, $paciente_id, $clinica_id);
+
             try {
                 $sqlHC = "SELECT hc.*, 
                                  u.nombre AS nombre_medico, 
-                                 d.codigo_cie, d.descripcion AS descripcion_cie
+                                 d.codigo_cie, d.descripcion AS descripcion_cie,
+                                 fh.nombre AS nombre_formato
                           FROM historias_clinicas hc
+                          LEFT JOIN formatos_historia fh ON fh.id = hc.formato_id
                           INNER JOIN pacientes_datos p ON hc.paciente_id = p.usuario_id
                           INNER JOIN usuarios_clinicas u ON hc.medico_id = u.id
                           LEFT JOIN diagnosticos d ON hc.diagnostico_id = d.id
@@ -275,6 +358,11 @@ switch ($action) {
                     $stmtV->execute([$hc_id]);
                     $historiaVision = $stmtV->fetch(PDO::FETCH_ASSOC);
 
+                    // Respuestas de los campos personalizados del formato
+                    $stmtCV = $pdo->prepare("SELECT etiqueta, valor FROM historia_campos_valores WHERE historia_id = ? ORDER BY id");
+                    $stmtCV->execute([$hc_id]);
+                    $camposValores = $stmtCV->fetchAll(PDO::FETCH_ASSOC);
+
                     // Adjuntos
                     $stmtA = $pdo->prepare("SELECT * FROM pacientes_adjuntos WHERE historia_id = ?");
                     $stmtA->execute([$hc_id]);
@@ -286,6 +374,7 @@ switch ($action) {
                                 <i class="fas fa-user-md"></i> Atención por: <?= htmlspecialchars($hc['nombre_medico']) ?>
                             </h5>
                             <div class="card-tools">
+                                <span class="badge badge-success py-1 px-2"><i class="fas fa-file-signature"></i> <?= htmlspecialchars($hc['nombre_formato'] ?? 'Historia clínica') ?></span>
                                 <span class="badge badge-secondary py-1 px-2">ID Atención: #<?= $hc_id ?></span>
                             </div>
                         </div>
@@ -334,6 +423,24 @@ switch ($action) {
                                         <?= htmlspecialchars($hc['descripcion_cie'] ?? 'Diagnóstico General') ?>
                                     </div>
                                 </div>
+
+                                <?php if (!empty($camposValores)): ?>
+                                <div class="col-12 mb-3">
+                                    <div class="card card-outline card-success mb-0">
+                                        <div class="card-header py-1">
+                                            <h6 class="m-0 font-weight-bold text-success"><i class="fas fa-list-ul"></i> <?= htmlspecialchars($hc['nombre_formato'] ?? 'Campos del formato') ?></h6>
+                                        </div>
+                                        <div class="card-body p-2">
+                                            <dl class="row mb-0 small">
+                                                <?php foreach ($camposValores as $cv): ?>
+                                                    <dt class="col-sm-4"><?= htmlspecialchars($cv['etiqueta']) ?></dt>
+                                                    <dd class="col-sm-8"><?= nl2br(htmlspecialchars($cv['valor'])) ?></dd>
+                                                <?php endforeach; ?>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
 
                                 <?php if (!empty($odontograma)): ?>
                                 <div class="col-md-6 mb-3">

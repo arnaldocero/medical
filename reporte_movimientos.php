@@ -1,5 +1,8 @@
 <?php
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('inventario.movimientos');
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) {
     header("Location: login.php");
     exit();
@@ -16,7 +19,7 @@ try {
     $sql = "SELECT m.fecha_movimiento, a.codigo, a.nombre, m.tipo_movimiento, m.cantidad, m.motivo 
             FROM inventario_movimientos m
             INNER JOIN articulos_inventario a ON m.articulo_id = a.id_articulo
-            WHERE m.clinica_id = ? 
+            WHERE m.clinica_id = ? AND " . sqlEnSedes('m.centro_id') . " 
             ORDER BY m.fecha_movimiento DESC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$clinica_id]);

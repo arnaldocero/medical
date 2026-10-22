@@ -6,6 +6,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Control de acceso por sede (centro de atención)
+require_once __DIR__ . '/sede.php';
+
 /**
  * Carga todos los permisos del rol del usuario en la sesión.
  * Llama a esta función inmediatamente después de que el usuario inicie sesión con éxito.
@@ -70,6 +73,14 @@ function requerirSesionAJAX() {
         echo json_encode([
             'status' => 'error',
             'message' => 'Sesión expirada. Inicie sesión nuevamente.'
+        ]);
+        exit();
+    }
+    if (!sedeSeleccionada()) {
+        header('Content-Type: application/json', true, 401);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Seleccione la sede de trabajo para continuar.'
         ]);
         exit();
     }

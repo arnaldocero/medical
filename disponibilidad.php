@@ -1,16 +1,20 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('agenda.oferta');
 include 'layout/header.php'; include 'layout/nav.php'; include 'layout/sidebar.php'; 
 require_once 'config/db.php';
 
 $clinica_id = $_SESSION['clinica'];
 
 // Obtener Médicos (Rol 2)
-$medicos = $pdo->prepare("SELECT id, nombre FROM usuarios_clinicas WHERE clinica_id = ? AND rol_id = 2 AND estado = 1");
+require_once 'config/roles.php';
+$medicos = $pdo->prepare("SELECT u.id, u.nombre FROM usuarios_clinicas u WHERE u.clinica_id = ? AND u.rol_id IN (" . listaSqlRoles(ROLES_MEDICOS) . ") AND u.estado = 1 AND " . sqlUsuarioEnSedes('u.id') . " ORDER BY u.nombre");
 $medicos->execute([$clinica_id]);
 
 // Obtener Sedes
-$sedes = $pdo->prepare("SELECT id, nombre_centro FROM centros_medicos WHERE clinica_id = ? AND estado = 1");
+$sedes = $pdo->prepare("SELECT id, nombre_centro FROM centros_medicos WHERE clinica_id = ? AND estado = 1 AND " . sqlEnSedes('id'));
 $sedes->execute([$clinica_id]);
 ?>
 

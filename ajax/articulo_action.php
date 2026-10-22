@@ -19,7 +19,7 @@ switch ($action) {
     case 'listar':
         try {
             // Filtrar estrictamente por la clínica autenticada
-            $stmt = $pdo->prepare("SELECT * FROM articulos_inventario WHERE clinica_id = ? ORDER BY id_articulo DESC");
+            $stmt = $pdo->prepare("SELECT * FROM articulos_inventario WHERE clinica_id = ? AND " . sqlEnSedes('centro_id') . " ORDER BY id_articulo DESC");
             $stmt->execute([$clinica_id]);
             $articulos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
@@ -33,7 +33,7 @@ switch ($action) {
         $id = intval($_POST['id_articulo'] ?? 0);
         try {
             // Validación cruzada: id_articulo + clinica_id
-            $stmt = $pdo->prepare("SELECT * FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id'));
             $stmt->execute([$id, $clinica_id]);
             $articulo = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -66,10 +66,13 @@ switch ($action) {
             exit();
         }
 
+        // El artículo se registra en el inventario de la sede de trabajo
+        $centro_id = sedeParaRegistrarAJAX();
+
         try {
-            // Validar que el código no esté duplicado en la misma clínica
-            $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM articulos_inventario WHERE codigo = ? AND clinica_id = ?");
-            $stmtCheck->execute([$codigo, $clinica_id]);
+            // Validar que el código no esté duplicado en la misma sede
+            $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM articulos_inventario WHERE codigo = ? AND clinica_id = ? AND centro_id = ?");
+            $stmtCheck->execute([$codigo, $clinica_id, $centro_id]);
             if ($stmtCheck->fetchColumn() > 0) {
                 echo json_encode(['status' => 'error', 'message' => 'El código ingresado ya está asignado a otro artículo en esta clínica.']);
                 exit();
@@ -77,14 +80,14 @@ switch ($action) {
 
             // Inserción inyectando automáticamente el clinica_id de la sesión
             $sql = "INSERT INTO articulos_inventario (
-                clinica_id, codigo, nombre, categoria, descripcion, unidad_medida, 
+                clinica_id, centro_id, codigo, nombre, categoria, descripcion, unidad_medida, 
                 stock_actual, stock_minimo, precio_compra, precio_venta, 
                 proveedor, fecha_ingreso, fecha_vencimiento
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $clinica_id, $codigo, $nombre, $categoria, $descripcion, $unidad_medida,
+                $clinica_id, $centro_id, $codigo, $nombre, $categoria, $descripcion, $unidad_medida,
                 $stock_actual, $stock_minimo, $precio_compra, $precio_venta,
                 $proveedor, $fecha_ingreso, $fecha_vencimiento
             ]);
@@ -116,7 +119,7 @@ switch ($action) {
 
         try {
             // Verificar pertenencia del artículo antes de actualizar
-            $stmtVerify = $pdo->prepare("SELECT COUNT(*) FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ?");
+            $stmtVerify = $pdo->prepare("SELECT COUNT(*) FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id'));
             $stmtVerify->execute([$id_articulo, $clinica_id]);
             if ($stmtVerify->fetchColumn() == 0) {
                 echo json_encode(['status' => 'error', 'message' => 'Acceso denegado. Este artículo no pertenece a su clínica.']);
@@ -124,8 +127,8 @@ switch ($action) {
             }
 
             // Validar duplicados de código dentro de la misma clínica
-            $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM articulos_inventario WHERE codigo = ? AND id_articulo != ? AND clinica_id = ?");
-            $stmtCheck->execute([$codigo, $id_articulo, $clinica_id]);
+            $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM articulos_inventario WHERE codigo = ? AND id_articulo != ? AND clinica_id = ? AND centro_id = (SELECT centro_id FROM articulos_inventario WHERE id_articulo = ?)");
+            $stmtCheck->execute([$codigo, $id_articulo, $clinica_id, $id_articulo]);
             if ($stmtCheck->fetchColumn() > 0) {
                 echo json_encode(['status' => 'error', 'message' => 'El código de artículo ya se encuentra en uso por otro de sus productos.']);
                 exit();
@@ -135,7 +138,7 @@ switch ($action) {
                 codigo = ?, nombre = ?, categoria = ?, descripcion = ?, unidad_medida = ?, 
                 stock_minimo = ?, precio_compra = ?, precio_venta = ?, 
                 proveedor = ?, fecha_ingreso = ?, fecha_vencimiento = ?
-                WHERE id_articulo = ? AND clinica_id = ?";
+                WHERE id_articulo = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id') . "";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -154,14 +157,14 @@ switch ($action) {
         $id = intval($_POST['id_articulo'] ?? 0);
         try {
             // Validación de pertenencia antes del DELETE
-            $stmtVerify = $pdo->prepare("SELECT COUNT(*) FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ?");
+            $stmtVerify = $pdo->prepare("SELECT COUNT(*) FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id'));
             $stmtVerify->execute([$id, $clinica_id]);
             if ($stmtVerify->fetchColumn() == 0) {
                 echo json_encode(['status' => 'error', 'message' => 'Acceso denegado. Este artículo no pertenece a su clínica.']);
                 exit();
             }
 
-            $stmt = $pdo->prepare("DELETE FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ?");
+            $stmt = $pdo->prepare("DELETE FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id'));
             $stmt->execute([$id, $clinica_id]);
             echo json_encode(['status' => 'success', 'message' => 'Artículo eliminado del almacén con éxito.']);
         } catch (PDOException $e) {
@@ -185,7 +188,7 @@ switch ($action) {
             $pdo->beginTransaction();
 
             // Bloquear fila y validar pertenencia estricta por clínica
-            $stmtLock = $pdo->prepare("SELECT stock_actual, nombre FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ? FOR UPDATE");
+            $stmtLock = $pdo->prepare("SELECT stock_actual, nombre, centro_id FROM articulos_inventario WHERE id_articulo = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id') . " FOR UPDATE");
             $stmtLock->execute([$id_articulo, $clinica_id]);
             $art = $stmtLock->fetch(PDO::FETCH_ASSOC);
 
@@ -207,12 +210,12 @@ switch ($action) {
             }
 
             // Actualizar tabla maestra de forma segura restringiendo por clinica_id
-            $stmtUpdate = $pdo->prepare("UPDATE articulos_inventario SET stock_actual = ? WHERE id_articulo = ? AND clinica_id = ?");
+            $stmtUpdate = $pdo->prepare("UPDATE articulos_inventario SET stock_actual = ? WHERE id_articulo = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id') . "");
             $stmtUpdate->execute([$nuevo_stock, $id_articulo, $clinica_id]);
 
             // Guardar el clinica_id en el historial de movimientos
-            $stmtHistorial = $pdo->prepare("INSERT INTO inventario_movimientos (clinica_id, articulo_id, tipo_movimiento, cantidad, motivo, usuario_id) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmtHistorial->execute([$clinica_id, $id_articulo, $tipo, $cantidad, $motivo, $usuario_id]);
+            $stmtHistorial = $pdo->prepare("INSERT INTO inventario_movimientos (clinica_id, centro_id, articulo_id, tipo_movimiento, cantidad, motivo, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmtHistorial->execute([$clinica_id, $art['centro_id'], $id_articulo, $tipo, $cantidad, $motivo, $usuario_id]);
 
             $pdo->commit();
             echo json_encode([

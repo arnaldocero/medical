@@ -96,6 +96,18 @@ $(document).ready(function() {
     // ==========================================
     // 3. ENVÍO ASÍNCRONO DEL FORMULARIO DE ATENCIÓN
     // ==========================================
+    // Si un campo obligatorio está en una pestaña oculta, abrir esa pestaña para que el navegador lo muestre
+    const formHC = document.getElementById('formHistoriaClinica');
+    if (formHC) {
+        formHC.addEventListener('invalid', function (ev) {
+            const panel = $(ev.target).closest('.tab-pane');
+            if (panel.length && !panel.hasClass('active')) {
+                $('#hcTabs a[href="#' + panel.attr('id') + '"]').tab('show');
+                setTimeout(() => ev.target.reportValidity(), 200);
+            }
+        }, true);
+    }
+
     $('#formHistoriaClinica').submit(function(e) {
         e.preventDefault();
 

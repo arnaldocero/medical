@@ -99,6 +99,23 @@ $(document).ready(function () {
                     }).then(() => {
                         location.reload();
                     });
+                } else if (res.status === 'vincular') {
+                    // El paciente existe en otra sede: ofrecer vincularlo a la sede actual
+                    btn.prop('disabled', false).text(textoOriginal);
+                    Swal.fire({
+                        title: 'Paciente ya registrado',
+                        text: res.message,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, vincular a esta sede',
+                        cancelButtonText: 'Cancelar'
+                    }).then((r) => {
+                        if (!r.isConfirmed) return;
+                        $.post('ajax/pacientes_action.php?action=vincular', { documento: res.documento }, function (v) {
+                            Swal.fire(v.status === 'success' ? '¡Vinculado!' : 'Atención', v.message, v.status === 'success' ? 'success' : 'warning')
+                                .then(() => { if (v.status === 'success') location.reload(); });
+                        }, 'json');
+                    });
                 } else {
                     Swal.fire('Atención', res.message, 'warning');
                     btn.prop('disabled', false).text(textoOriginal);

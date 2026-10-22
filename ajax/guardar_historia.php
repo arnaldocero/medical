@@ -41,6 +41,62 @@ if ($cita_id === 0 || $paciente_id === 0 || empty($motivo_consulta) || $diagnost
     exit();
 }
 
+// La cita debe ser del médico en sesión, del paciente indicado y de su sede de trabajo
+$stmtCita = $pdo->prepare("SELECT centro_id FROM citas_medicas WHERE id = ? AND medico_id = ? AND paciente_id = ? AND clinica_id = ?");
+$stmtCita->execute([$cita_id, intval($_SESSION['id']), $paciente_id, intval($_SESSION['clinica'])]);
+$centro_cita = $stmtCita->fetchColumn();
+if ($centro_cita === false || !puedeVerSede($centro_cita)) {
+    echo json_encode(['status' => 'error', 'message' => 'La cita no corresponde a su agenda en esta sede.']);
+    exit();
+}
+
+// FORMATO DE HISTORIA: debe ser uno de los formatos disponibles para el médico
+require_once '../config/formatos.php';
+$formato_id = intval($_POST['formato_id'] ?? 0);
+$idsPermitidos = array_map('intval', array_column(formatosDelMedico($pdo, $_SESSION['id'], $_SESSION['clinica']), 'id'));
+if (!in_array($formato_id, $idsPermitidos, true)) {
+    echo json_encode(['status' => 'error', 'message' => 'El formato de historia clínica no está asignado a su usuario.']);
+    exit();
+}
+$formato = obtenerFormato($pdo, $formato_id, $_SESSION['clinica']);
+
+// Solo se procesan las secciones activas del formato
+if (!formatoTieneSeccion($formato, 'odontograma')) {
+    $odontograma_raw = '[]';
+}
+if (!formatoTieneSeccion($formato, 'plan_formula')) {
+    $medicamentos = [];
+}
+$guardar_vision = formatoTieneSeccion($formato, 'vision');
+
+// CAMPOS PERSONALIZADOS: obligatorios y tipo de dato
+$valoresCampos = [];
+$respuestas = (array) ($_POST['campos_formato'] ?? []);
+foreach ($formato['campos'] as $campo) {
+    $valor = trim((string) ($respuestas[$campo['id']] ?? ''));
+
+    if ($valor === '') {
+        if (intval($campo['obligatorio']) === 1) {
+            echo json_encode(['status' => 'warning', 'message' => 'El campo "' . $campo['etiqueta'] . '" es obligatorio.']);
+            exit();
+        }
+        continue;
+    }
+
+    $valido = true;
+    switch ($campo['tipo']) {
+        case 'numero': $valido = is_numeric($valor); break;
+        case 'fecha':  $valido = (bool) DateTime::createFromFormat('Y-m-d', $valor); break;
+        case 'si_no':  $valido = in_array($valor, ['SI', 'NO'], true); break;
+        case 'lista':  $valido = in_array($valor, opcionesCampo($campo), true); break;
+    }
+    if (!$valido) {
+        echo json_encode(['status' => 'warning', 'message' => 'El valor del campo "' . $campo['etiqueta'] . '" no es válido.']);
+        exit();
+    }
+    $valoresCampos[] = [$campo['id'], $campo['etiqueta'], $valor];
+}
+
 try {
     $pdo->beginTransaction();
 
@@ -72,20 +128,28 @@ try {
 
     // 2. GUARDAR HISTORIA CLÍNICA
     $sqlHC = "INSERT INTO historias_clinicas (
-        cita_id, paciente_id, medico_id, motivo_consulta, enfermedad_actual, 
+        cita_id, paciente_id, medico_id, formato_id, motivo_consulta, enfermedad_actual, 
         presion_arterial, frecuencia_cardiaca, temperatura, saturacion_oxigeno, 
         peso, estatura, imc, examen_physical, diagnostico_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
     $stmtHC = $pdo->prepare($sqlHC);
     $stmtHC->execute([
-        $cita_id, $paciente_id, $medico_usuario_id, $motivo_consulta, $enfermedad_actual,
+        $cita_id, $paciente_id, $medico_usuario_id, $formato_id, $motivo_consulta, $enfermedad_actual,
         $presion_arterial, $frecuencia_cardiaca, $temperatura, $saturacion_oxigeno,
         $peso, $estatura, $imc, $examen_fisico, $diagnostico_id
     ]);
     
     // CAPTURA RELACIONAL: Extrae el ID asignado a la historia clínica que se acaba de crear
     $historia_clinica_id = $pdo->lastInsertId();
+
+    // Respuestas de los campos personalizados del formato (se guarda la etiqueta por si luego cambia)
+    if (!empty($valoresCampos)) {
+        $stmtValor = $pdo->prepare("INSERT INTO historia_campos_valores (historia_id, campo_id, etiqueta, valor) VALUES (?, ?, ?, ?)");
+        foreach ($valoresCampos as [$campoId, $etiqueta, $valor]) {
+            $stmtValor->execute([$historia_clinica_id, $campoId, $etiqueta, $valor]);
+        }
+    }
 
     // 3. PROCESAR Y GUARDAR EL ODONTOGRAMA CLÍNICO
     $datosOdontograma = json_decode($odontograma_raw, true);
@@ -142,7 +206,7 @@ try {
 
     // Condición de seguridad: Guardar solo si al menos uno de los campos principales de visión 
     // contiene información (así evitamos insertar filas totalmente vacías cuando atienda un Médico General u Odontólogo)
-    if (!empty($av_lejos_od) || !empty($av_lejos_oi) || !empty($ref_esfera_od) || !empty($ref_esfera_oi) || !empty($examen_lente_hendidura)) {
+    if ($guardar_vision && (!empty($av_lejos_od) || !empty($av_lejos_oi) || !empty($ref_esfera_od) || !empty($ref_esfera_oi) || !empty($examen_lente_hendidura))) {
         
         $sqlVision = "INSERT INTO historias_vision (
             historia_clinica_id, av_lejos_od, av_lejos_oi, av_cerca_od, av_cerca_oi, 
@@ -177,11 +241,12 @@ try {
     if (!empty($medicamentos)) {
         
         // A. Insertar cabecera de la fórmula médica
-        $sqlCabecera = "INSERT INTO formulas_medicas (clinica_id, paciente_id, medico_id, diagnostico_cie10, observaciones, estado) 
-                        VALUES (?, ?, ?, ?, ?, 'PENDIENTE')";
+        $sqlCabecera = "INSERT INTO formulas_medicas (clinica_id, centro_id, paciente_id, medico_id, diagnostico_cie10, observaciones, estado) 
+                        VALUES (?, ?, ?, ?, ?, ?, 'PENDIENTE')";
         $stmtCabecera = $pdo->prepare($sqlCabecera);
         $stmtCabecera->execute([
             $clinica_id, 
+            $centro_cita, 
             $paciente_datos_id, 
             $medico_datos_id, 
             $codigo_cie_string, 

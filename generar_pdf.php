@@ -1,5 +1,8 @@
 <?php
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina(['financiero.facturar', 'financiero.historial']);
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) { header("Location: login.php"); exit(); }
 
 require_once 'config/db.php';
@@ -25,7 +28,7 @@ $stmtF = $pdo->prepare("SELECT
                         LEFT JOIN pacientes_datos pd ON u.id = pd.usuario_id
                         LEFT JOIN contratos c ON f.contrato_id = c.id
                         LEFT JOIN eps e ON c.eps_id = e.id
-                        WHERE f.id = ? AND f.clinica_id = ?");
+                        WHERE f.id = ? AND f.clinica_id = ? AND " . sqlEnSedes('f.centro_id'));
 $stmtF->execute([$factura_id, $clinica_id]);
 $factura = $stmtF->fetch(PDO::FETCH_ASSOC);
 

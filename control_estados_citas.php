@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('citas.estados');
 if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 
 include 'layout/header.php'; 
@@ -10,7 +13,7 @@ require_once 'config/db.php';
 $clinica_id = $_SESSION['clinica'];
 
 // CONSULTA: Sedes para filtrar
-$stmtCentros = $pdo->prepare("SELECT id, nombre_centro FROM centros_medicos WHERE clinica_id = ? AND estado = 1 ORDER BY nombre_centro ASC");
+$stmtCentros = $pdo->prepare("SELECT id, nombre_centro FROM centros_medicos WHERE clinica_id = ? AND estado = 1 AND " . sqlEnSedes('id') . " ORDER BY nombre_centro ASC");
 $stmtCentros->execute([$clinica_id]);
 $centros = $stmtCentros->fetchAll();
 ?>

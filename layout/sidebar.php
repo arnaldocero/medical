@@ -130,7 +130,7 @@ if ($nombreUsuario === '') {
         <?php endif; ?>
 
         <!-- CATEGORÍA: ATENCIÓN MÉDICA -->
-        <?php if (tienePermiso('citas.agendar') || tienePermiso('citas.express') || tienePermiso('citas.estados') || tienePermiso('sala.espera') || tienePermiso('medico.panel') || tienePermiso('agenda.oferta') || tienePermiso('servicios.cups') || tienePermiso('diagnosticos.cie10')): ?>
+        <?php if (tienePermiso('citas.agendar') || tienePermiso('citas.express') || tienePermiso('citas.estados') || tienePermiso('sala.espera') || tienePermiso('medico.panel') || tienePermiso('agenda.oferta') || tienePermiso('servicios.cups') || tienePermiso('diagnosticos.cie10') || tienePermiso('formatos.administrar')): ?>
         <li class="nav-item has-treeview"> 
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-notes-medical"></i>
@@ -208,6 +208,15 @@ if ($nombreUsuario === '') {
               <a href="diagnosticos.php" class="nav-link">
                 <i class="fas fa-stethoscope nav-icon"></i>
                 <p>Gestión Diagnósticos</p>
+              </a>
+            </li>
+            <?php endif; ?>
+
+            <?php if (tienePermiso('formatos.administrar')): ?>
+            <li class="nav-item">
+              <a href="formatos.php" class="nav-link">
+                <i class="fas fa-file-signature nav-icon text-success"></i>
+                <p>Formatos de Historia</p>
               </a>
             </li>
             <?php endif; ?>

@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('infraestructura.consultorios');
 if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 include 'layout/header.php'; include 'layout/nav.php'; include 'layout/sidebar.php'; 
 require_once 'config/db.php';
@@ -9,13 +12,13 @@ $stmt = $pdo->prepare("
     SELECT c.*, cm.nombre_centro 
     FROM consultorios c
     INNER JOIN centros_medicos cm ON c.centro_id = cm.id
-    WHERE c.clinica_id = ?
+    WHERE c.clinica_id = ? AND " . sqlEnSedes('c.centro_id') . "
 ");
 $stmt->execute([$_SESSION['clinica']]);
 $consultorios = $stmt->fetchAll();
 
 // Obtenemos las sedes activas para el select del modal
-$sedes = $pdo->prepare("SELECT id, nombre_centro FROM centros_medicos WHERE clinica_id = ? AND estado = 1");
+$sedes = $pdo->prepare("SELECT id, nombre_centro FROM centros_medicos WHERE clinica_id = ? AND estado = 1 AND " . sqlEnSedes('id'));
 $sedes->execute([$_SESSION['clinica']]);
 $listaSedes = $sedes->fetchAll();
 ?>

@@ -1,5 +1,8 @@
 <?php
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('citas.express');
 if (!isset($_SESSION['id'])) { 
     header("Location: login.php"); 
     exit(); 
@@ -19,9 +22,11 @@ try {
                 u.email
             FROM pacientes_datos p
             INNER JOIN usuarios_clinicas u ON p.usuario_id = u.id
+            WHERE u.clinica_id = ? AND u.estado = 1 AND " . sqlUsuarioEnSedes('u.id') . "
             ORDER BY u.nombre ASC
             LIMIT 50";
-    $stmt = $pdo->query($sql);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$_SESSION['clinica']]);
     $pacientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $pacientes = [];

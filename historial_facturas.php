@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('financiero.historial');
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) { header("Location: login.php"); exit(); }
 
 require_once 'config/db.php';
@@ -13,7 +16,7 @@ $query = "SELECT f.id, f.numero_factura, f.subtotal, f.total, f.metodo_pago, f.e
           INNER JOIN usuarios_clinicas u ON f.paciente_id = u.id
           LEFT JOIN contratos c ON f.contrato_id = c.id
           LEFT JOIN eps e ON c.eps_id = e.id
-          WHERE f.clinica_id = ?
+          WHERE f.clinica_id = ? AND " . sqlEnSedes('f.centro_id') . "
           ORDER BY f.fecha_emision DESC";
 
 $stmt = $pdo->prepare($query);

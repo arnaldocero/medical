@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('financiero.rips');
 if (!isset($_SESSION['id']) || !isset($_SESSION['clinica'])) { 
     header("Location: login.php"); 
     exit(); 

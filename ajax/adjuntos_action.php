@@ -23,6 +23,9 @@ if ($action === 'subir_adjunto') {
     $medico_id = $_SESSION['id']; // El usuario médico que está logueado
 
     // Validaciones básicas de texto
+    if (!empty($paciente_id)) {
+        validarUsuarioEnSedeAJAX($pdo, $paciente_id, 'El paciente no pertenece a su sede de trabajo.');
+    }
     if (empty($paciente_id) || empty($nombre_personalizado)) {
         echo json_encode(['status' => 'error', 'message' => 'Faltan campos obligatorios (Paciente o Nombre del documento).']);
         exit();
@@ -105,6 +108,9 @@ if ($action === 'subir_adjunto') {
 // --- ACCIÓN 2: LISTAR LOS ADJUNTOS DE UN PACIENTE ---
 if ($action === 'listar_adjuntos') {
     $paciente_id = $_GET['paciente_id'] ?? '';
+    if (!empty($paciente_id)) {
+        validarUsuarioEnSedeAJAX($pdo, $paciente_id, 'El paciente no pertenece a su sede de trabajo.');
+    }
 
     if (empty($paciente_id)) {
         echo json_encode(['status' => 'error', 'message' => 'ID de paciente requerido.']);
@@ -142,6 +148,14 @@ if ($action === 'eliminar_adjunto') {
 
     try {
         // Primero consultamos la ruta del archivo para poder borrarlo del disco duro
+        // El adjunto debe ser de un paciente de la sede de trabajo
+        $stmtPac = $pdo->prepare("SELECT paciente_id FROM pacientes_adjuntos WHERE id = ?");
+        $stmtPac->execute([$id]);
+        $pacienteAdjunto = $stmtPac->fetchColumn();
+        if ($pacienteAdjunto !== false) {
+            validarUsuarioEnSedeAJAX($pdo, $pacienteAdjunto, 'El adjunto no pertenece a un paciente de su sede.');
+        }
+
         $stmt = $pdo->prepare("SELECT ruta_archivo FROM pacientes_adjuntos WHERE id = ?");
         $stmt->execute([$id]);
         $archivo = $stmt->fetch(PDO::FETCH_ASSOC);

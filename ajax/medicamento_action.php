@@ -18,7 +18,7 @@ switch ($action) {
     case 'listar':
         try {
             // Trae el catálogo de la clínica actual
-            $stmt = $pdo->prepare("SELECT * FROM medicamentos WHERE clinica_id = ? ORDER BY nombre_generico ASC");
+            $stmt = $pdo->prepare("SELECT m.*, c.nombre_centro FROM medicamentos m LEFT JOIN centros_medicos c ON c.id = m.centro_id WHERE m.clinica_id = ? AND " . sqlEnSedes('m.centro_id') . " ORDER BY m.nombre_generico ASC");
             $stmt->execute([$clinica_id]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['status' => 'success', 'data' => $data]);
@@ -41,10 +41,11 @@ switch ($action) {
         }
 
         try {
-            $sql = "INSERT INTO medicamentos (clinica_id, nombre_generico, nombre_comercial, presentacion, stock_actual, stock_minimo, codigo_barras) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $centro_id = sedeParaRegistrarAJAX();
+            $sql = "INSERT INTO medicamentos (clinica_id, centro_id, nombre_generico, nombre_comercial, presentacion, stock_actual, stock_minimo, codigo_barras) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$clinica_id, $nombre_generico, $nombre_comercial, $presentacion, $stock_actual, $stock_minimo, $codigo_barras]);
+            $stmt->execute([$clinica_id, $centro_id, $nombre_generico, $nombre_comercial, $presentacion, $stock_actual, $stock_minimo, $codigo_barras]);
 
             echo json_encode(['status' => 'success', 'message' => 'Medicamento registrado exitosamente en inventario.']);
         } catch (PDOException $e) {

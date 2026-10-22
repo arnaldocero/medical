@@ -18,7 +18,7 @@ try {
             INNER JOIN usuarios_clinicas p ON cm.paciente_id = p.id
             INNER JOIN usuarios_clinicas m ON cm.medico_id = m.id
             INNER JOIN consultorios con ON cm.consultorio_id = con.id
-            WHERE cm.clinica_id = ? AND cm.fecha_cita = ? AND cm.estado IN ('En Sala', 'En Consulta')
+            WHERE cm.clinica_id = ? AND " . sqlEnSedes('cm.centro_id') . " AND cm.fecha_cita = ? AND cm.estado IN ('En Sala', 'En Consulta')
             ORDER BY CASE WHEN cm.estado = 'En Consulta' THEN 1 ELSE 2 END, cm.hora_inicio ASC";
 
     $stmt = $pdo->prepare($sql);

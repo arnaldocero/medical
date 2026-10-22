@@ -33,6 +33,9 @@ $(document).ready(function () {
                             data-experiencia="${row.anos_experiencia || 0}">
                             <i class="fas fa-edit"></i>
                         </button>
+                        <button class="btn btn-info btn-sm btnAsignarSede shadow-sm" title="Sedes" data-id="${row.usuario_id}" data-nombre="${row.medico_nombre}">
+                            <i class="fas fa-hospital"></i>
+                        </button>
                         <button class="btn btn-danger btn-sm btnEliminarMedico shadow-sm" data-id="${row.usuario_id}">
                             <i class="fas fa-trash"></i>
                         </button>

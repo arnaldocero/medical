@@ -44,6 +44,7 @@ switch ($action) {
         $centro_id = $_POST['id'] ?? '';
         
         if (!empty($centro_id)) {
+            validarSedeAJAX($centro_id);
             $stmt = $pdo->prepare("SELECT id, nombre_consultorio FROM consultorios WHERE centro_id = ? AND estado = 1");
             $stmt->execute([$centro_id]);
             $consultorios = $stmt->fetchAll(PDO::FETCH_ASSOC);

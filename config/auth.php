@@ -3,6 +3,7 @@
  * Utilidades de autenticación: inicio de sesión, "Recordarme" y cierre de sesión.
  * Requiere que $pdo (config/db.php) y config/security.php estén cargados.
  */
+require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/security.php';
 
 define('REMEMBER_COOKIE', 'c_remember');
@@ -42,6 +43,9 @@ function iniciarSesionUsuario($pdo, array $usuario) {
     $_SESSION['clinica'] = $usuario['clinica_id'];
 
     cargarPermisosUsuario($pdo, $usuario['rol_id']);
+
+    // La sede se elige después de iniciar sesión (o se asigna sola si solo tiene una)
+    olvidarSede();
 }
 
 /**
@@ -104,4 +108,48 @@ function restaurarSesionDesdeCookie($pdo) {
     iniciarSesionUsuario($pdo, $usuario);
     crearTokenRecordarme($pdo, $usuario['id']);
     return true;
+}
+
+/**
+ * Protege una pantalla (vista PHP). Llamar al inicio de la página, justo después de session_start().
+ *
+ * 1. Si no hay sesión pero existe una cookie "Recordarme" válida, la restaura.
+ * 2. Sin sesión: redirige al login.
+ * 3. Sin el permiso: redirige al inicio con un aviso de acceso denegado.
+ *
+ * @param string|array $permisos Slug requerido, o lista de slugs (basta con tener uno).
+ *                               Lista vacía = solo exige sesión.
+ */
+function protegerPagina($permisos = []) {
+    global $pdo;
+
+    if (!isset($_SESSION['id'])) {
+        restaurarSesionDesdeCookie($pdo);
+    }
+
+    if (!isset($_SESSION['id'], $_SESSION['clinica'])) {
+        header("Location: login.php");
+        exit();
+    }
+
+    // Sede de trabajo: se asigna sola si el usuario tiene una; si no, debe elegirla
+    if (!autoseleccionarSede($pdo)) {
+        header("Location: seleccionar_sede.php");
+        exit();
+    }
+
+    $permisos = (array) $permisos;
+    if (empty($permisos)) {
+        return;
+    }
+
+    foreach ($permisos as $slug) {
+        if (tienePermiso($slug)) {
+            return;
+        }
+    }
+
+    $_SESSION['security_error'] = "Acceso denegado: no cuenta con permiso para ver esa pantalla.";
+    header("Location: index.php");
+    exit();
 }

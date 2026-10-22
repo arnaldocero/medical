@@ -1,5 +1,8 @@
 <?php 
 session_start();
+// Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
+require_once 'config/auth.php';
+protegerPagina('pacientes.gestionar');
 if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 
 include 'layout/header.php'; 
@@ -11,13 +14,9 @@ $clinica_id_sesion = $_SESSION['clinica'] ?? null;
 
 try {
     // 1. CONSULTA DE ROLES ASIGNABLES A PACIENTES
-    $stmtRolesPacientes = $pdo->query("
-        SELECT id, nombre_rol 
-        FROM roles_clinicas 
-        WHERE nombre_rol LIKE '%Paciente%' OR id = 5 
-        ORDER BY id ASC
-    ");
-    $rolesPacientes = $stmtRolesPacientes->fetchAll(PDO::FETCH_ASSOC);
+    // (clasificación central en config/roles.php)
+    require_once 'config/roles.php';
+    $rolesPacientes = obtenerRolesPacientes($pdo);
 
     // 2. CONSULTA DE PACIENTES CON ROL Y EPS ASOCIADA
     $stmt = $pdo->prepare("
@@ -33,6 +32,7 @@ try {
         LEFT JOIN roles_clinicas r ON u.rol_id = r.id
         LEFT JOIN eps e ON p.eps_id = e.id
         WHERE u.clinica_id = ?
+          AND " . sqlUsuarioEnSedes('u.id') . "
         ORDER BY p.id DESC
     ");
     $stmt->execute([$clinica_id_sesion]);
@@ -129,6 +129,11 @@ try {
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 
+                                <button class="btn btn-sm btn-outline-info shadow-sm btnAsignarSede" title="Sedes del paciente"
+                                        data-id="<?= $p['usuario_id'] ?>" data-nombre="<?= htmlspecialchars($p['nombre']) ?>">
+                                    <i class="fas fa-hospital"></i>
+                                </button>
+
                                 <!-- CLASE MODIFICADA: btnEliminarPaciente -->
                                 <button class="btn btn-danger btn-sm btnEliminarPaciente shadow-sm" 
                                         data-id="<?= $p['id'] ?>" 
@@ -284,5 +289,7 @@ try {
         </div>
     </div>
 </div>
+
+<?php include 'layout/modal_sedes.php'; ?>
 
 <?php include 'layout/footer.php'; ?>

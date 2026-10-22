@@ -22,7 +22,7 @@ switch ($action) {
             $stmt = $pdo->prepare("
                 SELECT id, nombre_generico, nombre_comercial, presentacion, stock_actual 
                 FROM medicamentos 
-                WHERE clinica_id = ? AND estado = 'activo' 
+                WHERE clinica_id = ? AND estado = 'activo' AND " . sqlEnSedes('centro_id') . " 
                 AND (nombre_generico LIKE ? OR nombre_comercial LIKE ?) 
                 LIMIT 10
             ");
@@ -54,6 +54,23 @@ switch ($action) {
             exit();
         }
 
+        // La fórmula se crea en la sede de trabajo, para un paciente de esa sede y con medicamentos de esa sede
+        $centro_id = sedeParaRegistrarAJAX();
+        $stmtPacSede = $pdo->prepare("SELECT usuario_id FROM pacientes_datos WHERE id = ?");
+        $stmtPacSede->execute([$paciente_datos_id]);
+        $usuarioPaciente = $stmtPacSede->fetchColumn();
+        if ($usuarioPaciente === false || !usuarioEnSede($pdo, $usuarioPaciente, $centro_id)) {
+            responderErrorSede('El paciente no está vinculado a esta sede.');
+        }
+        $idsMed = array_filter(array_map(function ($i) { return intval($i['medicamento_id'] ?? 0); }, $medicamentos));
+        if (!empty($idsMed)) {
+            $stmtMedSede = $pdo->prepare("SELECT COUNT(*) FROM medicamentos WHERE centro_id = ? AND id IN (" . implode(',', $idsMed) . ")");
+            $stmtMedSede->execute([$centro_id]);
+            if ($stmtMedSede->fetchColumn() != count(array_unique($idsMed))) {
+                responderErrorSede('Hay medicamentos que no pertenecen a la farmacia de esta sede.');
+            }
+        }
+
         try {
             $pdo->beginTransaction();
 
@@ -69,10 +86,10 @@ switch ($action) {
             $medico_datos_id = intval($medico['id']); // El ID correcto para la FK
 
             // 1. Insertar Cabecera de la Fórmula
-            $queryCabecera = "INSERT INTO formulas_medicas (clinica_id, paciente_id, medico_id, diagnostico_cie10, observaciones, estado) 
-                              VALUES (?, ?, ?, ?, ?, 'PENDIENTE')";
+            $queryCabecera = "INSERT INTO formulas_medicas (clinica_id, centro_id, paciente_id, medico_id, diagnostico_cie10, observaciones, estado) 
+                              VALUES (?, ?, ?, ?, ?, ?, 'PENDIENTE')";
             $stmtCabecera = $pdo->prepare($queryCabecera);
-            $stmtCabecera->execute([$clinica_id, $paciente_datos_id, $medico_datos_id, $diagnostico, $observaciones]);
+            $stmtCabecera->execute([$clinica_id, $centro_id, $paciente_datos_id, $medico_datos_id, $diagnostico, $observaciones]);
             $formula_id = $pdo->lastInsertId();
 
             // 2. Insertar Detalle de la Fórmula
