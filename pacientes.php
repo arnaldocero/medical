@@ -48,7 +48,7 @@ try {
     }
 
 } catch (PDOException $e) {
-    die("Error al cargar datos: " . $e->getMessage());
+    die(mensajeErrorInterno($e));
 } 
 ?>
 

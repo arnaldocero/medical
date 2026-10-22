@@ -138,7 +138,7 @@ try {
 } catch (Exception $e) {
     echo json_encode([
         "status" => "error",
-        "message" => "Excepción interna del servidor: " . $e->getMessage()
+        "message" => mensajeErrorInterno($e)
     ]);
     exit();
 }

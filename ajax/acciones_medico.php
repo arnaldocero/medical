@@ -60,5 +60,5 @@ try {
     echo json_encode(['status' => 'error', 'message' => 'Acción no reconocida.']);
 
 } catch (PDOException $e) {
-    echo json_encode(['status' => 'error', 'message' => 'Error en la base de datos: ' . $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
 }

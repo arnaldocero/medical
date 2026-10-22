@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'config/csrf.php';
 
 // Si ya hay sesión activa, o una cookie "Recordarme" válida, entrar directamente
 if (!isset($_SESSION['id']) && !empty($_COOKIE['c_remember'])) {
@@ -18,6 +19,7 @@ if (isset($_SESSION['id'])) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Medical Creations | Iniciar Sesión</title>
+  <?= metaCSRF() ?>
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
   <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
@@ -95,6 +97,7 @@ $(document).ready(function() {
         $.ajax({
             url: 'ajax/login_proceso.php', // Asegúrate de que esta ruta sea correcta
             type: 'POST',
+            headers: { 'X-CSRF-Token': $('meta[name=csrf-token]').attr('content') },
             data: datos,
             dataType: 'json',
             success: function(response) {

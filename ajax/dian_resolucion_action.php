@@ -22,7 +22,7 @@ switch ($action) {
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['status' => 'success', 'data' => $data]);
         } catch (PDOException $e) {
-            echo json_encode(['status' => 'error', 'message' => 'Error al listar: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 
@@ -74,7 +74,7 @@ switch ($action) {
             echo json_encode(['status' => 'success', 'message' => 'Resolución registrada y activada correctamente.']);
         } catch (PDOException $e) {
             $pdo->rollBack();
-            echo json_encode(['status' => 'error', 'message' => 'Error en base de datos: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 
@@ -108,7 +108,7 @@ switch ($action) {
             echo json_encode(['status' => 'success', 'message' => 'Estado actualizado exitosamente.']);
         } catch (PDOException $e) {
             $pdo->rollBack();
-            echo json_encode(['status' => 'error', 'message' => 'Error al cambiar estado: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 

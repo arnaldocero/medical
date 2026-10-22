@@ -82,5 +82,5 @@ try {
     ]);
 
 } catch (PDOException $e) {
-    echo json_encode(['status' => 'error', 'message' => 'Error en base de datos: ' . $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
 }

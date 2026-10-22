@@ -116,6 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        echo json_encode(['status' => 'error', 'message' => 'Error en el servidor: ' . $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
     }
 }

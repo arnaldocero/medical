@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 require_once '../config/db.php';
 require_once '../config/app.php';
+require_once '../config/correo.php';
 
 $email = trim($_POST['email'] ?? '');
 
@@ -33,7 +34,6 @@ if ($user) {
     // Correo HTML
     $nombre = htmlspecialchars($user['nombre'], ENT_QUOTES, 'UTF-8');
     $enlaceHtml = htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8');
-    $asunto = '=?UTF-8?B?' . base64_encode('Recuperación de contraseña - ' . MAIL_FROM_NAME) . '?=';
     $cuerpo = "
         <p>Hola <strong>{$nombre}</strong>,</p>
         <p>Recibimos una solicitud para restablecer la contraseña de su cuenta.</p>
@@ -41,17 +41,7 @@ if ($user) {
         <p>O copie este enlace en su navegador:<br>{$enlaceHtml}</p>
         <p>El enlace vence en 1 hora. Si usted no hizo esta solicitud, ignore este mensaje.</p>
     ";
-    $cabeceras = implode("\r\n", [
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'From: =?UTF-8?B?' . base64_encode(MAIL_FROM_NAME) . '?= <' . MAIL_FROM . '>',
-    ]);
-
-    $enviado = @mail($user['email'], $asunto, $cuerpo, $cabeceras, '-f' . MAIL_FROM);
-
-    if (!$enviado) {
-        error_log('Recuperación de contraseña: no se pudo enviar el correo al usuario ID ' . $user['id']);
-    }
+    enviarCorreo($user['email'], 'Recuperación de contraseña', $cuerpo);
 
     // Solo en desarrollo local (XAMPP no envía correos) se muestra el enlace en pantalla
     if (esPeticionLocal()) {

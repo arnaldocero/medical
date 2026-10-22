@@ -37,5 +37,5 @@ try {
     echo json_encode(['status' => 'success', 'data' => $pacientes]);
 
 } catch (PDOException $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
 }

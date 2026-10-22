@@ -39,7 +39,7 @@ switch ($action) {
             }
             echo json_encode(['results' => $items]);
         } catch (PDOException $e) {
-            echo json_encode(['error' => $e->getMessage()]);
+            echo json_encode(['error' => mensajeErrorInterno($e)]);
         }
         break;
 
@@ -120,7 +120,7 @@ switch ($action) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
         // === NUEVO CASO: BUSCADOR DINÁMICO DE DIAGNÓSTICOS CIE-10 ===
@@ -147,7 +147,7 @@ switch ($action) {
             }
             echo json_encode(['results' => $items]);
         } catch (PDOException $e) {
-            echo json_encode(['error' => $e->getMessage()]);
+            echo json_encode(['error' => mensajeErrorInterno($e)]);
         }
         break;
 

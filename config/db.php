@@ -2,6 +2,12 @@
 // Las credenciales se leen del archivo .env (no se sube a git). Ver .env.example
 require_once __DIR__ . '/env.php';
 
+// Errores de PHP: en producción nunca se muestran en pantalla (solo se registran en el log).
+// Para verlos en desarrollo, poner APP_DEBUG=true en el .env local.
+$appDebug = in_array(strtolower((string) env('APP_DEBUG', 'false')), ['1', 'true', 'si'], true);
+ini_set('display_errors', $appDebug ? '1' : '0');
+ini_set('log_errors', '1');
+
 $pdo = (function () {
     $host    = env('DB_HOST');
     $db      = env('DB_NAME');

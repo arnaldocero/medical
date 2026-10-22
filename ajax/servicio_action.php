@@ -114,6 +114,6 @@ try {
     }
 
 } catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => "Error interno: " . $e->getMessage()]);
+    echo json_encode(["status" => "error", "message" => mensajeErrorInterno($e)]);
     exit();
 }

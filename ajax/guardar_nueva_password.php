@@ -20,7 +20,7 @@ if ($user) {
     // Actualizar contraseña, invalidar token y cerrar los "Recordarme" activos
     $update = $pdo->prepare("
         UPDATE usuarios_clinicas
-        SET password = ?, token_recuperacion = NULL, expira_recuperacion = NULL, remember_token = NULL
+        SET password = ?, token_recuperacion = NULL, expira_recuperacion = NULL, remember_token = NULL, intentos_fallidos = 0, bloqueado_hasta = NULL
         WHERE id = ?
     ");
     $update->execute([$passHash, $user['id']]);

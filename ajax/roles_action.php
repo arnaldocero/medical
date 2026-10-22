@@ -12,6 +12,7 @@ if (!isset($_SESSION['id'])) {
 
 require_once '../config/db.php';
 require_once '../config/security.php';
+requerirSesionAJAX(); // sesión, sede y token CSRF
 
 // Comprobación de seguridad
 if ((!isset($_SESSION['rol']) || $_SESSION['rol'] != 1) && !tienePermiso('roles.administrar')) {
@@ -179,6 +180,6 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    echo json_encode(['status' => 'error', 'message' => 'Error en el servidor: ' . $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
     exit();
 }

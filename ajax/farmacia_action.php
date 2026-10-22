@@ -56,7 +56,7 @@ switch ($action) {
                 'medicamentos' => $medicamentos
             ]);
         } catch (PDOException $e) {
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 
@@ -106,7 +106,7 @@ switch ($action) {
         } catch (Exception $e) {
             // Si algo falla, revertimos absolutamente TODO el proceso
             $pdo->rollBack();
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 }

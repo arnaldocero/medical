@@ -15,11 +15,14 @@ $sedes = obtenerSedesUsuario($pdo);
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (seleccionarSede($pdo, $_POST['centro_id'] ?? -1)) {
+    if (!csrfValido()) {
+        $error = 'La sesión de seguridad expiró. Vuelva a seleccionar la sede.';
+    } elseif (seleccionarSede($pdo, $_POST['centro_id'] ?? -1)) {
         header("Location: index.php");
         exit();
+    } else {
+        $error = 'La sede seleccionada no es válida para su usuario.';
     }
-    $error = 'La sede seleccionada no es válida para su usuario.';
 }
 
 $sedeActualId = $_SESSION['centro'] ?? null;
@@ -68,6 +71,7 @@ $sedeActualId = $_SESSION['centro'] ?? null;
         <?php endif; ?>
 
         <form method="post" id="formSede">
+          <?= campoCSRF() ?>
           <?php foreach ($sedes as $s): ?>
             <label class="sede-opcion d-flex align-items-center border rounded p-3 mb-2 w-100 <?= (int)$sedeActualId === (int)$s['id'] ? 'activa' : '' ?>">
               <input type="radio" name="centro_id" value="<?= (int)$s['id'] ?>">

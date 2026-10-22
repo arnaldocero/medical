@@ -196,7 +196,7 @@ try {
             }
             echo json_encode([
                 "status" => "error",
-                "message" => "No se pudo procesar el documento: " . $e->getMessage()
+                "message" => mensajeErrorInterno($e)
             ]);
             exit();
         }
@@ -293,7 +293,7 @@ try {
     // Devolvemos el error real para saber exactamente qué línea falló en la base de datos
     echo json_encode([
         "status" => "error", 
-        "message" => "Error crítico en el servidor: " . $e->getMessage(),
+        "message" => mensajeErrorInterno($e),
         "file" => $e->getFile(),
         "line" => $e->getLine()
     ]);

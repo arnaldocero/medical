@@ -237,7 +237,7 @@ try {
     }
     echo json_encode([
         "status" => "error",
-        "message" => "Error en la base de datos: " . $e->getMessage()
+        "message" => mensajeErrorInterno($e)
     ]);
     exit();
 }

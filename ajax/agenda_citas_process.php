@@ -188,7 +188,7 @@ switch ($action) {
                 ]);
     
             } catch (Exception $e) {
-                echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+                echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
             }
             break;
 
@@ -261,7 +261,7 @@ switch ($action) {
                 echo json_encode(['status' => 'error', 'message' => 'No se pudo guardar la cita médica.']);
             }
         } catch (Exception $e) {
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 }

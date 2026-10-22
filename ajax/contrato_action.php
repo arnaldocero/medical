@@ -81,6 +81,6 @@ try {
     }
 
 } catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => "Error interno en la operación: " . $e->getMessage()]);
+    echo json_encode(["status" => "error", "message" => mensajeErrorInterno($e)]);
     exit();
 }

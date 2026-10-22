@@ -164,7 +164,7 @@ switch ($action) {
 
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
-                echo json_encode(['status' => 'error', 'message' => 'Error en el servidor: ' . $e->getMessage()]);
+                echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
             }
         }
         break;
@@ -261,7 +261,7 @@ switch ($action) {
 
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
-                echo json_encode(['status' => 'error', 'message' => 'Error en el servidor: ' . $e->getMessage()]);
+                echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
             }
         }
         break;
@@ -288,7 +288,7 @@ switch ($action) {
                     echo json_encode(['status' => 'success', 'message' => 'Paciente desactivado correctamente.']);
                 } catch (Exception $e) {
                     if ($pdo->inTransaction()) $pdo->rollBack();
-                    echo json_encode(['status' => 'error', 'message' => 'Error al desactivar: ' . $e->getMessage()]);
+                    echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
                 }
             } else {
                 echo json_encode(['status' => 'error', 'message' => 'Parámetros inválidos.']);
@@ -573,7 +573,7 @@ switch ($action) {
                 }
 
             } catch (Exception $e) {
-                echo '<div class="alert alert-danger">Error al procesar el historial médico: ' . $e->getMessage() . '</div>';
+                echo mensajeErrorInterno($e) . '</div>';
             }
         }
         break;

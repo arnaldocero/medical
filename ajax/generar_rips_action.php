@@ -53,7 +53,7 @@ if ($action === 'listar_atenciones') {
         // Si la base de datos falla, devolvemos el error exacto como JSON
         echo json_encode([
             'status' => 'error', 
-            'message' => 'Error en la consulta de base de datos: ' . $e->getMessage()
+            'message' => mensajeErrorInterno($e)
         ]);
         exit();
     }

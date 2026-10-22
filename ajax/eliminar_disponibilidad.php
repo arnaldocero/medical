@@ -15,5 +15,5 @@ try {
     
     echo json_encode(['status' => 'success', 'message' => 'Horario eliminado']);
 } catch (Exception $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
 }

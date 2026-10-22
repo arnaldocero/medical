@@ -43,7 +43,7 @@ switch ($action) {
                 echo json_encode(['status' => 'error', 'message' => 'Artículo no encontrado o no pertenece a su clínica.']);
             }
         } catch (PDOException $e) {
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 
@@ -94,7 +94,7 @@ switch ($action) {
 
             echo json_encode(['status' => 'success', 'message' => 'Artículo registrado correctamente en el inventario de su clínica.']);
         } catch (PDOException $e) {
-            echo json_encode(['status' => 'error', 'message' => 'Error al insertar: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 
@@ -149,7 +149,7 @@ switch ($action) {
 
             echo json_encode(['status' => 'success', 'message' => 'Artículo actualizado correctamente.']);
         } catch (PDOException $e) {
-            echo json_encode(['status' => 'error', 'message' => 'Error al actualizar: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 
@@ -225,7 +225,7 @@ switch ($action) {
 
         } catch (Exception $e) {
             $pdo->rollBack();
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 

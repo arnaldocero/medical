@@ -4,6 +4,10 @@
   </footer>
 </div> 
 <script src="plugins/jquery/jquery.min.js"></script>
+<script>
+  // CSRF: todas las peticiones AJAX envían el token de la sesión
+  $.ajaxSetup({ headers: { "X-CSRF-Token": $("meta[name=csrf-token]").attr("content") } });
+</script>
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="plugins/datatables/jquery.dataTables.min.js"></script>
 <script src="plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>

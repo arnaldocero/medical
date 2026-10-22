@@ -96,7 +96,7 @@ if ($action === 'subir_adjunto') {
             if (file_exists($ruta_final_archivo)) {
                 unlink($ruta_final_archivo);
             }
-            echo json_encode(['status' => 'error', 'message' => 'Error al guardar en Base de Datos: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
             exit();
         }
     } else {
@@ -132,7 +132,7 @@ if ($action === 'listar_adjuntos') {
         exit();
 
     } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         exit();
     }
 }
@@ -180,7 +180,7 @@ if ($action === 'eliminar_adjunto') {
         }
 
     } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         exit();
     }
 }

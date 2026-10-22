@@ -9,6 +9,25 @@ if (session_status() === PHP_SESSION_NONE) {
 // Control de acceso por sede (centro de atención)
 require_once __DIR__ . '/sede.php';
 
+// Protección CSRF para peticiones POST
+require_once __DIR__ . '/csrf.php';
+
+/**
+ * Mensaje seguro para mostrar al usuario cuando ocurre una excepción.
+ *  - Avisos de negocio lanzados por el propio código (new Exception("...")): se muestran tal cual.
+ *  - Errores de base de datos o del sistema (PDOException, etc.): se registran en el log del
+ *    servidor con un código de referencia y al usuario solo se le muestra un mensaje genérico,
+ *    sin revelar tablas, columnas ni consultas SQL.
+ */
+function mensajeErrorInterno($e) {
+    if (get_class($e) === 'Exception') {
+        return $e->getMessage();
+    }
+    $codigo = strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+    error_log("[ERR-$codigo] " . get_class($e) . ': ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
+    return "Ocurrió un error interno al procesar la solicitud (código $codigo). Intente de nuevo o contacte al administrador.";
+}
+
 /**
  * Carga todos los permisos del rol del usuario en la sesión.
  * Llama a esta función inmediatamente después de que el usuario inicie sesión con éxito.
@@ -84,6 +103,8 @@ function requerirSesionAJAX() {
         ]);
         exit();
     }
+    // Toda petición POST de un usuario autenticado debe traer el token CSRF
+    validarCSRF();
 }
 
 /**

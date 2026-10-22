@@ -90,6 +90,7 @@ $('#btnBuscarAtenciones').on('click', function() {
         // Crear un formulario virtual e invisible para forzar la descarga binaria del stream JSON
         let form = $('<form>', { action: 'ajax/generar_rips_action.php', method: 'POST' });
         form.append($('<input>', { type: 'hidden', name: 'action', value: 'descargar_rips' }));
+        form.append($('<input>', { type: 'hidden', name: 'csrf_token', value: $('meta[name=csrf-token]').attr('content') }));
         form.append($('<input>', { type: 'hidden', name: 'historias_ids', value: JSON.stringify(seleccionados) }));
         
         $('body').append(form);

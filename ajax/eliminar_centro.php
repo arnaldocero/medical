@@ -28,7 +28,7 @@ if (isset($_POST['id'])) {
         }
 
     } catch (Exception $e) {
-        echo json_encode(['status' => 'error', 'message' => 'Error: ' . $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
     }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'ID no proporcionado']);

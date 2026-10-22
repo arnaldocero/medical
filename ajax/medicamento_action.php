@@ -23,7 +23,7 @@ switch ($action) {
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['status' => 'success', 'data' => $data]);
         } catch (PDOException $e) {
-            echo json_encode(['status' => 'error', 'message' => 'Error al listar: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 
@@ -49,7 +49,7 @@ switch ($action) {
 
             echo json_encode(['status' => 'success', 'message' => 'Medicamento registrado exitosamente en inventario.']);
         } catch (PDOException $e) {
-            echo json_encode(['status' => 'error', 'message' => 'Error al guardar: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
         }
         break;
 

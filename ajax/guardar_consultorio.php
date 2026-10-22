@@ -31,5 +31,5 @@ try {
     }
     echo json_encode(['status' => 'success', 'message' => $res]);
 } catch (Exception $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);
 }
