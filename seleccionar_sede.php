@@ -56,6 +56,13 @@ $sedeActualId = $_SESSION['centro'] ?? null;
       <?php else: ?>
         <p class="text-center text-muted">Seleccione la sede o centro de atención donde va a trabajar:</p>
 
+        <?php if (esAdmin() && count($sedes) === 0): ?>
+          <div class="alert alert-info small">
+            <i class="fas fa-info-circle"></i> Su clínica aún no tiene sedes registradas. Entre en "Todas las sedes"
+            y créelas en <strong>Infraestructura → Centros de Atención</strong>; luego asigne el personal a cada sede.
+          </div>
+        <?php endif; ?>
+
         <?php if ($error): ?>
           <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
