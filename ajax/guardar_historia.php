@@ -27,7 +27,8 @@ $saturacion_oxigeno = trim($_POST['saturacion_oxigeno'] ?? '');
 $peso = !empty($_POST['peso']) ? floatval($_POST['peso']) : null;
 $estatura = !empty($_POST['estatura']) ? floatval($_POST['estatura']) : null;
 $imc = trim($_POST['imc'] ?? '');
-$examen_fisico = trim($_POST['examen_fisico'] ?? '');
+// El formulario envía "examen_physical" (nombre de la columna); se acepta también "examen_fisico"
+$examen_fisico = trim($_POST['examen_physical'] ?? $_POST['examen_fisico'] ?? '');
 
 // Captura de Datos de la Receta Médica integrada
 $medicamentos = $_POST['med_items'] ?? [];
@@ -35,6 +36,8 @@ $observaciones_formula = trim($_POST['observaciones_formula'] ?? '');
 
 // CAPTURA DEL ODONTOGRAMA: Recibe la cadena estructurada JSON generada por JS
 $odontograma_raw = $_POST['odontograma_json'] ?? '[]';
+// Hallazgos clínicos y plan odontológico: se guardan en la columna "tratamiento"
+$tratamiento = trim($_POST['observaciones_odontograma'] ?? '');
 
 if ($cita_id === 0 || $paciente_id === 0 || empty($motivo_consulta) || $diagnostico_id === 0) {
     echo json_encode(['status' => 'error', 'message' => 'Los campos con asterisco (*) son obligatorios, incluyendo el Diagnóstico.']);
@@ -63,6 +66,7 @@ $formato = obtenerFormato($pdo, $formato_id, $_SESSION['clinica']);
 // Solo se procesan las secciones activas del formato
 if (!formatoTieneSeccion($formato, 'odontograma')) {
     $odontograma_raw = '[]';
+    $tratamiento = '';
 }
 if (!formatoTieneSeccion($formato, 'plan_formula')) {
     $medicamentos = [];
@@ -130,14 +134,14 @@ try {
     $sqlHC = "INSERT INTO historias_clinicas (
         cita_id, paciente_id, medico_id, formato_id, motivo_consulta, enfermedad_actual, 
         presion_arterial, frecuencia_cardiaca, temperatura, saturacion_oxigeno, 
-        peso, estatura, imc, examen_physical, diagnostico_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        peso, estatura, imc, examen_physical, diagnostico_id, tratamiento
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
     $stmtHC = $pdo->prepare($sqlHC);
     $stmtHC->execute([
         $cita_id, $paciente_id, $medico_usuario_id, $formato_id, $motivo_consulta, $enfermedad_actual,
         $presion_arterial, $frecuencia_cardiaca, $temperatura, $saturacion_oxigeno,
-        $peso, $estatura, $imc, $examen_fisico, $diagnostico_id
+        $peso, $estatura, $imc, $examen_fisico, $diagnostico_id, ($tratamiento !== '' ? $tratamiento : null)
     ]);
     
     // CAPTURA RELACIONAL: Extrae el ID asignado a la historia clínica que se acaba de crear
@@ -271,7 +275,7 @@ try {
     }
 
     // 5. CAMBIAR EL ESTADO DE LA CITA A FINALIZADA
-    $stmtCita = $pdo->prepare("UPDATE citas_medicas SET estado = 'Atendido' WHERE id = ?");
+    $stmtCita = $pdo->prepare("UPDATE citas_medicas SET estado = 'Atendida' WHERE id = ?");
     $stmtCita->execute([$cita_id]);
 
     $pdo->commit();

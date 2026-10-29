@@ -53,7 +53,7 @@ try {
     $sqlInsert = "INSERT INTO citas_medicas 
                     (clinica_id, paciente_id, medico_id, centro_id, consultorio_id, servicio_id, fecha_cita, hora_inicio, hora_fin, motivo_consulta, valor_cita, estado) 
                   VALUES 
-                    (:clinica_id, :paciente_id, :medico_id, :centro_id, :consultorio_id, :servicio_id, :fecha_cita, :hora_inicio, :hora_fin, :motivo, :valor_cita, 'En Atencion')";
+                    (:clinica_id, :paciente_id, :medico_id, :centro_id, :consultorio_id, :servicio_id, :fecha_cita, :hora_inicio, :hora_fin, :motivo, :valor_cita, 'En Consulta')"; // mismo estado que usan sala, panel y control de estados
     
     $stmtInsert = $pdo->prepare($sqlInsert);
     $res = $stmtInsert->execute([

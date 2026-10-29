@@ -475,6 +475,17 @@ switch ($action) {
                                 </div>
                                 <?php endif; ?>
 
+                                <?php if (!empty($hc['tratamiento'])): ?>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card card-warning card-inner shadow-sm">
+                                        <div class="card-header py-1 text-dark">
+                                            <h6 class="m-0 font-weight-bold"><i class="fas fa-notes-medical"></i> Hallazgos y Plan Odontológico</h6>
+                                        </div>
+                                        <div class="card-body p-2 small"><?= nl2br(htmlspecialchars($hc['tratamiento'])) ?></div>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+
                                 <?php if ($formula): ?>
                                 <div class="col-md-6 mb-3">
                                     <div class="card card-success card-inner shadow-sm">

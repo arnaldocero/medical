@@ -8,6 +8,10 @@ $appDebug = in_array(strtolower((string) env('APP_DEBUG', 'false')), ['1', 'true
 ini_set('display_errors', $appDebug ? '1' : '0');
 ini_set('log_errors', '1');
 
+// Zona horaria única para PHP y MySQL (por defecto Colombia). Evita que "hoy" sea distinto
+// en PHP y en la base de datos (sala de espera, panel médico, agenda, bloqueos de login...).
+date_default_timezone_set(env('APP_TIMEZONE', 'America/Bogota'));
+
 $pdo = (function () {
     $host    = env('DB_HOST');
     $db      = env('DB_NAME');
@@ -30,7 +34,10 @@ $pdo = (function () {
     $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 
     try {
-        return new PDO($dsn, $user, $pass, $options);
+        $conexion = new PDO($dsn, $user, $pass, $options);
+        // MySQL usa el mismo desfase horario que PHP (ej. -05:00), así NOW()/CURDATE() coinciden con date()
+        $conexion->exec("SET time_zone = '" . (new DateTime())->format('P') . "'");
+        return $conexion;
     } catch (\PDOException $e) {
         // Registrar el detalle en el log del servidor sin mostrar datos de conexión al usuario
         error_log('Error de conexión a la base de datos: ' . $e->getMessage());
