@@ -7,7 +7,7 @@ require_once '../config/roles.php';
 header('Content-Type: application/json');
 
 // Validamos el permiso específico para eliminar de manera segura
-requerirPermisoAJAX('usuarios.eliminar');
+requerirPermisoAJAX(permisosUsuarios('eliminar'));
 
 if (isset($_POST['id'])) {
     $id = intval($_POST['id']);
@@ -20,6 +20,14 @@ if (isset($_POST['id'])) {
     // Usamos borrado lógico (estado = 0) para no romper la integridad referencial.
     // Solo personal del sistema de la misma clínica (médicos y pacientes se gestionan en sus módulos)
     validarUsuarioEnSedeAJAX($pdo, $id);
+
+    // Solo el Administrador puede desactivar a otro Administrador
+    $stmtRol = $pdo->prepare("SELECT rol_id FROM usuarios_clinicas WHERE id = ? AND clinica_id = ?");
+    $stmtRol->execute([$id, $_SESSION['clinica']]);
+    if (!puedeTocarRol($stmtRol->fetchColumn())) {
+        echo json_encode(['status' => 'error', 'message' => 'Solo el Administrador puede desactivar a un Administrador.']);
+        exit();
+    }
 
     $rolesExcluidos = listaSqlRoles(array_merge(ROLES_MEDICOS, ROLES_PACIENTES));
     $stmt = $pdo->prepare("UPDATE usuarios_clinicas SET estado = 0 WHERE id = ? AND clinica_id = ? AND rol_id NOT IN ($rolesExcluidos)");

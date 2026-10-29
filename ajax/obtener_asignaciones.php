@@ -17,8 +17,8 @@ $stmtU = $pdo->prepare("SELECT rol_id FROM usuarios_clinicas WHERE id = ? AND cl
 $stmtU->execute([$usuario_id, $clinica_id]);
 $rolDestino = $stmtU->fetchColumn();
 
-if ($rolDestino === false) {
-    echo "<p class='text-danger'>Usuario no encontrado.</p>";
+if ($rolDestino === false || !puedeTocarRol($rolDestino)) {
+    echo "<p class='text-danger'>Usuario no encontrado o protegido.</p>";
     exit();
 }
 
@@ -60,5 +60,5 @@ foreach ($centros as $c) {
 function permisoAsignarSede($rolId) {
     if (esRolMedico($rolId)) return 'medicos.administrar';
     if (esRolPaciente($rolId)) return 'pacientes.gestionar';
-    return 'usuarios.asignar_sede';
+    return permisosUsuarios('asignar_sede');
 }

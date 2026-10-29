@@ -15,6 +15,31 @@ define('ROLES_MEDICOS', [2, 6, 7, 12]);   // Medico, Medico Especialista, Medico
 define('ROLES_PACIENTES', [5, 8, 9]);     // Paciente, Paciente Beneficiario, Paciente Particular
 
 /**
+ * Permisos de Gestión Usuarios. "usuarios.administrar" equivale a tenerlos todos.
+ * Acciones: ver, crear, editar, eliminar, asignar_sede.
+ */
+function permisosUsuarios($accion) {
+    return ["usuarios.$accion", 'usuarios.administrar'];
+}
+
+function puedeUsuarios($accion) {
+    foreach (permisosUsuarios($accion) as $slug) {
+        if (tienePermiso($slug)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Solo el Administrador puede crear, editar, desactivar o cambiar sedes de usuarios con rol Admin.
+ * Evita que alguien con permisos de usuarios se dé acceso total creando un Admin.
+ */
+function puedeTocarRol($rolId) {
+    return esAdmin() || intval($rolId) !== ROL_ADMIN;
+}
+
+/**
  * Lista de IDs para usar dentro de un IN (...) de SQL. Solo enteros, segura para concatenar.
  */
 function listaSqlRoles(array $ids) {

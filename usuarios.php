@@ -2,15 +2,13 @@
 session_start();
 // Seguridad: sesión activa (o "Recordarme") + permiso de la pantalla
 require_once 'config/auth.php';
-protegerPagina(['usuarios.administrar', 'usuarios.ver']);
+protegerPagina(['usuarios.ver', 'usuarios.administrar']);
 if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 
 require_once 'config/db.php';
 require_once 'config/security.php';
 require_once 'config/roles.php';
 
-// 1. Validar permisos
-requerirPermiso('usuarios.ver');
 
 include 'layout/header.php'; 
 include 'layout/nav.php'; 
@@ -18,7 +16,8 @@ include 'layout/sidebar.php';
 
 // CONSULTA: Solo personal del sistema (los médicos y pacientes tienen su propia gestión)
 $rolesExcluidos = listaSqlRoles(array_merge(ROLES_MEDICOS, ROLES_PACIENTES));
-$rolesPersonal = obtenerRolesPersonal($pdo);
+// Solo el Admin puede asignar el rol Admin
+$rolesPersonal = array_values(array_filter(obtenerRolesPersonal($pdo), fn($r) => puedeTocarRol($r['id'])));
 $stmt = $pdo->prepare("
     SELECT u.id, u.nombre, u.usuario, u.email, u.estado, u.fecha_creacion, r.nombre_rol, u.rol_id,
            p.tipo_documento, p.documento_identidad, p.telefono, p.direccion, 
@@ -40,7 +39,7 @@ $usuarios = $stmt->fetchAll();
             <div class="row mb-2">
                 <div class="col-sm-6"><h1>Gestión de Personal Interno</h1></div>
                 <div class="col-sm-6 text-right">
-                    <?php if (tienePermiso('usuarios.crear')): ?>
+                    <?php if (puedeUsuarios('crear')): ?>
                         <button class="btn btn-success" data-toggle="modal" data-target="#modalUsuario">
                             <i class="fas fa-plus"></i> Nuevo Usuario
                         </button>
@@ -74,13 +73,16 @@ $usuarios = $stmt->fetchAll();
                             <td><?= htmlspecialchars($u['email']) ?></td>
                             <td><?= htmlspecialchars($u['nombre_rol']) ?></td>
                             <td>
+                                <?php if (!puedeTocarRol($u['rol_id'])): ?>
+                                    <span class="badge badge-light border" title="Solo el Administrador puede modificar este usuario"><i class="fas fa-lock"></i> Protegido</span>
+                                <?php else: ?>
                                 <!-- Botón Asignar Sede -->
-                                <?php if (tienePermiso('usuarios.asignar_sede')): ?>
+                                <?php if (puedeUsuarios('asignar_sede')): ?>
                                     <button class="btn btn-info btn-sm btnAsignarSede" data-id="<?= $u['id'] ?>" data-nombre="<?= htmlspecialchars($u['nombre']) ?>"><i class="fas fa-hospital"></i></button>
                                 <?php endif; ?>
                                 
                                 <!-- Botón Editar -->
-                                <?php if (tienePermiso('usuarios.editar')): ?>
+                                <?php if (puedeUsuarios('editar')): ?>
                                     <button class="btn btn-warning btn-sm btnEditarUsuario" 
                                             data-id="<?= $u['id'] ?>" 
                                             data-nombre="<?= htmlspecialchars($u['nombre']) ?>" 
@@ -99,8 +101,9 @@ $usuarios = $stmt->fetchAll();
                                 <?php endif; ?>
 
                                 <!-- Botón Eliminar -->
-                                <?php if (tienePermiso('usuarios.eliminar')): ?>
+                                <?php if (puedeUsuarios('eliminar')): ?>
                                     <button class="btn btn-danger btn-sm btnEliminar" data-id="<?= $u['id'] ?>" data-nombre="<?= htmlspecialchars($u['nombre']) ?>"><i class="fas fa-trash"></i></button>
+                                <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                         </tr>

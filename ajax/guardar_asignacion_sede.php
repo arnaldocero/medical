@@ -29,7 +29,13 @@ if (esRolMedico($rolDestino)) {
 } elseif (esRolPaciente($rolDestino)) {
     requerirPermisoAJAX('pacientes.gestionar');
 } else {
-    requerirPermisoAJAX('usuarios.asignar_sede');
+    requerirPermisoAJAX(permisosUsuarios('asignar_sede'));
+}
+
+// Solo el Administrador puede cambiar las sedes de un Administrador
+if (!puedeTocarRol($rolDestino)) {
+    echo json_encode(['status' => 'error', 'message' => 'Solo el Administrador puede modificar las sedes de un Administrador.']);
+    exit();
 }
 
 validarUsuarioEnSedeAJAX($pdo, $usuario_id);

@@ -12,14 +12,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // --- PROTECCIÓN SEGÚN ACCIÓN DE USUARIO ---
         if ($idUsuario) {
-            requerirPermisoAJAX('usuarios.editar');
+            requerirPermisoAJAX(permisosUsuarios('editar'));
         } else {
-            requerirPermisoAJAX('usuarios.crear');
+            requerirPermisoAJAX(permisosUsuarios('crear'));
         }
 
         // --- SOLO PERSONAL DEL SISTEMA: médicos y pacientes se gestionan en sus propios módulos ---
         if (!esRolPersonal($_POST['rol_id'] ?? 0)) {
             echo json_encode(['status' => 'error', 'message' => 'Rol no permitido. Los médicos y pacientes se registran en Gestión Médicos y Gestión Pacientes.']);
+            exit();
+        }
+
+        // --- Solo el Administrador puede asignar el rol Admin ---
+        if (!puedeTocarRol($_POST['rol_id'])) {
+            echo json_encode(['status' => 'error', 'message' => 'Solo el Administrador puede asignar el rol Admin.']);
             exit();
         }
 
@@ -32,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmtActual->execute([$idUsuario, $_SESSION['clinica']]);
             $rolActual = $stmtActual->fetchColumn();
 
-            if ($rolActual === false || !esRolPersonal($rolActual) || !usuarioEnSedesVisibles($pdo, $idUsuario)) {
+            if ($rolActual === false || !esRolPersonal($rolActual) || !puedeTocarRol($rolActual) || !usuarioEnSedesVisibles($pdo, $idUsuario)) {
                 echo json_encode(['status' => 'error', 'message' => 'Este usuario no se puede editar desde Gestión Usuarios.']);
                 exit();
             }
