@@ -71,6 +71,9 @@ switch ($action) {
             ]);
 
             $pdo->commit();
+            auditar($pdo, 'dian', 'crear', $pdo->lastInsertId(), "Registró la resolución DIAN $numero_resolucion (prefijo $prefijo, $numero_inicial-$numero_final)", null,
+                ['numero_resolucion' => $numero_resolucion, 'prefijo' => $prefijo, 'numero_inicial' => $numero_inicial, 'numero_final' => $numero_final,
+                 'fecha_resolucion' => $fecha_resolucion, 'vigencia_meses' => $vigencia_meses, 'sede' => $centro_id]);
             echo json_encode(['status' => 'success', 'message' => 'Resolución registrada y activada correctamente.']);
         } catch (PDOException $e) {
             $pdo->rollBack();
@@ -105,6 +108,7 @@ switch ($action) {
             $stmt->execute([$nuevo_estado, $id, $clinica_id]);
 
             $pdo->commit();
+            auditar($pdo, 'dian', 'cambiar_estado', $id, "Cambió la resolución DIAN #$id a $nuevo_estado", null, ['estado' => $nuevo_estado]);
             echo json_encode(['status' => 'success', 'message' => 'Estado actualizado exitosamente.']);
         } catch (PDOException $e) {
             $pdo->rollBack();

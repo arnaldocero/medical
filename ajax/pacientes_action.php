@@ -62,6 +62,7 @@ switch ($action) {
             }
 
             asignarUsuarioASede($pdo, $existente['usuario_id'], $sedeNuevo);
+            auditar($pdo, 'paciente', 'vincular', $existente['usuario_id'], "Vinculó al paciente {$existente['nombre']} a {$_SESSION['centro_nombre']}", null, ['sede' => $sedeNuevo]);
             echo json_encode(['status' => 'success', 'message' => 'Paciente ' . $existente['nombre'] . ' vinculado a ' . $_SESSION['centro_nombre'] . '.']);
         }
         break;
@@ -160,6 +161,7 @@ switch ($action) {
                 ]);
 
                 $pdo->commit();
+                auditar($pdo, 'paciente', 'crear', $idUsuarioCreado, "Registró al paciente $nombre (documento $documento)", null, filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, p.documento_identidad, p.fecha_nacimiento, p.genero, p.tipo_sangre, p.telefono_contacto, p.direccion, p.eps_id, p.contacto_emergencia_nombre, p.contacto_emergencia_telefono FROM usuarios_clinicas u LEFT JOIN pacientes_datos p ON p.usuario_id = u.id WHERE u.id = ?', [$idUsuarioCreado]));
                 echo json_encode(['status' => 'success', 'message' => 'Paciente registrado exitosamente.']);
 
             } catch (Exception $e) {
@@ -186,6 +188,7 @@ switch ($action) {
                 if (validarPacienteDatosAJAX($pdo, $idPaciente, $clinica_id) !== $idUsuario) {
                     throw new Exception("Los datos del paciente no coinciden.");
                 }
+                $antesAud = filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, p.documento_identidad, p.fecha_nacimiento, p.genero, p.tipo_sangre, p.telefono_contacto, p.direccion, p.eps_id, p.contacto_emergencia_nombre, p.contacto_emergencia_telefono FROM usuarios_clinicas u LEFT JOIN pacientes_datos p ON p.usuario_id = u.id WHERE u.id = ?', [$idUsuario]);
 
                 $nombre = trim($_POST['nombre'] ?? '');
                 $email = trim($_POST['email'] ?? '');
@@ -257,6 +260,7 @@ switch ($action) {
                 ]);
 
                 $pdo->commit();
+                auditar($pdo, 'paciente', 'editar', $idUsuario, "Editó al paciente $nombre", $antesAud, filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, p.documento_identidad, p.fecha_nacimiento, p.genero, p.tipo_sangre, p.telefono_contacto, p.direccion, p.eps_id, p.contacto_emergencia_nombre, p.contacto_emergencia_telefono FROM usuarios_clinicas u LEFT JOIN pacientes_datos p ON p.usuario_id = u.id WHERE u.id = ?', [$idUsuario]));
                 echo json_encode(['status' => 'success', 'message' => 'Información del paciente actualizada con éxito.']);
 
             } catch (Exception $e) {
@@ -285,6 +289,8 @@ switch ($action) {
                     $stmtUser->execute([$idUsuario, $clinica_id]);
 
                     $pdo->commit();
+                    $pAud = filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, p.documento_identidad, p.fecha_nacimiento, p.genero, p.tipo_sangre, p.telefono_contacto, p.direccion, p.eps_id, p.contacto_emergencia_nombre, p.contacto_emergencia_telefono FROM usuarios_clinicas u LEFT JOIN pacientes_datos p ON p.usuario_id = u.id WHERE u.id = ?', [$idUsuario]);
+                    auditar($pdo, 'paciente', 'desactivar', $idUsuario, "Desactivó al paciente {$pAud['nombre']}", ['estado' => 1], ['estado' => 0]);
                     echo json_encode(['status' => 'success', 'message' => 'Paciente desactivado correctamente.']);
                 } catch (Exception $e) {
                     if ($pdo->inTransaction()) $pdo->rollBack();

@@ -102,6 +102,7 @@ try {
 
             $pdo->beginTransaction();
 
+            $antesAud = $id > 0 ? obtenerFormato($pdo, $id, $clinica_id) : null;
             if ($id > 0) {
                 formatoDeLaClinica($pdo, $id, $clinica_id);
                 $pdo->prepare("UPDATE formatos_historia SET nombre = ?, descripcion = ?, secciones = ?, es_predeterminado = ? WHERE id = ? AND clinica_id = ?")
@@ -140,6 +141,7 @@ try {
             }
 
             $pdo->commit();
+            auditar($pdo, 'formato', $antesAud ? 'editar' : 'crear', $id, ($antesAud ? 'Editó' : 'Creó') . " el formato de historia '$nombre'", $antesAud, obtenerFormato($pdo, $id, $clinica_id));
             echo json_encode(['status' => 'success', 'message' => 'Formato guardado correctamente.', 'id' => $id]);
             break;
 
@@ -147,6 +149,7 @@ try {
             $id = formatoDeLaClinica($pdo, $_POST['id'] ?? 0, $clinica_id);
             $estado = intval($_POST['estado'] ?? 0) === 1 ? 1 : 0;
             $pdo->prepare("UPDATE formatos_historia SET estado = ? WHERE id = ? AND clinica_id = ?")->execute([$estado, $id, $clinica_id]);
+            auditar($pdo, 'formato', $estado ? 'activar' : 'desactivar', $id, ($estado ? 'Activó' : 'Desactivó') . " el formato #$id");
             echo json_encode(['status' => 'success', 'message' => $estado ? 'Formato activado.' : 'Formato desactivado.']);
             break;
 
@@ -179,6 +182,9 @@ try {
             $stmtVis->execute([$clinica_id]);
             $visibles = array_map('intval', $stmtVis->fetchAll(PDO::FETCH_COLUMN));
 
+            $sMedAud = $pdo->prepare('SELECT usuario_id FROM formato_medicos WHERE formato_id = ? ORDER BY usuario_id');
+            $sMedAud->execute([$id]);
+            $antesAud = ['medicos' => array_map('intval', $sMedAud->fetchAll(PDO::FETCH_COLUMN))];
             $pdo->beginTransaction();
             if (!empty($visibles)) {
                 $pdo->prepare("DELETE FROM formato_medicos WHERE formato_id = ? AND usuario_id IN (" . implode(',', $visibles) . ")")->execute([$id]);
@@ -188,6 +194,8 @@ try {
                 $stmtIns->execute([$id, $medico]);
             }
             $pdo->commit();
+            $sMedAud->execute([$id]);
+            auditar($pdo, 'formato', 'asignar_medicos', $id, "Cambió los médicos del formato #$id", $antesAud, ['medicos' => array_map('intval', $sMedAud->fetchAll(PDO::FETCH_COLUMN))]);
             echo json_encode(['status' => 'success', 'message' => 'Médicos asignados correctamente.']);
             break;
 

@@ -50,5 +50,6 @@
 
 <script src="dist/js/inventario.js"></script>
 <script src="dist/js/formatos.js"></script>
+<script src="dist/js/auditoria.js"></script>
 </body>
 </html>

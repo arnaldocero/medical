@@ -125,6 +125,7 @@ try {
         $stmtMedico->execute([$usuario_id, $licencia_medica, $especialidad_id, $universidad_egreso, $anos_experiencia]);
 
         $pdo->commit();
+        auditar($pdo, 'medico', 'crear', $usuario_id, "Registró al médico $nombre (licencia $licencia_medica)", null, filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, d.licencia_medica, d.especialidad, d.universidad_egreso, d.anos_experiencia, d.estado_medico FROM usuarios_clinicas u LEFT JOIN datos_medicos d ON d.usuario_id = u.id WHERE u.id = ?', [$usuario_id]));
         echo json_encode(["status" => "success", "message" => "Médico registrado correctamente en el sistema."]);
         exit();
     }
@@ -153,6 +154,7 @@ try {
 
         // Solo médicos de la sede de trabajo
         validarUsuarioEnSedeAJAX($pdo, $usuario_id, 'El médico no pertenece a su sede de trabajo.');
+        $antesAud = filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, d.licencia_medica, d.especialidad, d.universidad_egreso, d.anos_experiencia, d.estado_medico FROM usuarios_clinicas u LEFT JOIN datos_medicos d ON d.usuario_id = u.id WHERE u.id = ?', [$usuario_id]);
 
         $pdo->beginTransaction();
 
@@ -201,6 +203,7 @@ try {
         $stmtUpdateMedico->execute([$licencia_medica, $especialidad_id, $universidad_egreso, $anos_experiencia, $usuario_id]);
 
         $pdo->commit();
+        auditar($pdo, 'medico', 'editar', $usuario_id, "Editó al médico $nombre", $antesAud, filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, d.licencia_medica, d.especialidad, d.universidad_egreso, d.anos_experiencia, d.estado_medico FROM usuarios_clinicas u LEFT JOIN datos_medicos d ON d.usuario_id = u.id WHERE u.id = ?', [$usuario_id]));
         echo json_encode(["status" => "success", "message" => "Información del médico actualizada exitosamente."]);
         exit();
     }
@@ -216,6 +219,7 @@ try {
 
         // Solo médicos de la sede de trabajo
         validarUsuarioEnSedeAJAX($pdo, $usuario_id, 'El médico no pertenece a su sede de trabajo.');
+        $antesAud = filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, d.licencia_medica, d.especialidad, d.universidad_egreso, d.anos_experiencia, d.estado_medico FROM usuarios_clinicas u LEFT JOIN datos_medicos d ON d.usuario_id = u.id WHERE u.id = ?', [$usuario_id]);
 
         $pdo->beginTransaction();
 
@@ -227,6 +231,7 @@ try {
         $stmtDelMed->execute([$usuario_id]);
 
         $pdo->commit();
+        auditar($pdo, 'medico', 'desactivar', $usuario_id, "Desactivó al médico {$antesAud['nombre']}", $antesAud, filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, d.licencia_medica, d.especialidad, d.universidad_egreso, d.anos_experiencia, d.estado_medico FROM usuarios_clinicas u LEFT JOIN datos_medicos d ON d.usuario_id = u.id WHERE u.id = ?', [$usuario_id]));
         echo json_encode(["status" => "success", "message" => "El profesional médico ha sido desactivado del sistema correctamente."]);
         exit();
     }

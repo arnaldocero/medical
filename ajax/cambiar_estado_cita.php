@@ -36,6 +36,7 @@ try {
             SET estado = ?, fecha_actualizacion = CURRENT_TIMESTAMP 
             WHERE id = ? AND clinica_id = ? AND " . sqlEnSedes('centro_id');
     
+    $antesAud = filaAuditoria($pdo, 'SELECT estado FROM citas_medicas WHERE id = ? AND clinica_id = ?', [$cita_id, $clinica_id]);
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$nuevo_estado, $cita_id, $clinica_id]);
 
@@ -45,6 +46,7 @@ try {
         if ($nuevo_estado === 'En Sala')  $mensaje = "El paciente ingresó correctamente a la Sala de Espera.";
         if ($nuevo_estado === 'Cancelada') $mensaje = "La cita se canceló y el cupo ha sido liberado.";
         
+        auditar($pdo, 'cita', 'cambiar_estado', $cita_id, "Cambió la cita #$cita_id a '$nuevo_estado'", $antesAud, ['estado' => $nuevo_estado]);
         echo json_encode(['status' => 'success', 'message' => $mensaje]);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'No se detectaron cambios o la cita no pertenece a tu clínica.']);

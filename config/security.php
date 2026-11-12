@@ -12,6 +12,9 @@ require_once __DIR__ . '/sede.php';
 // Protección CSRF para peticiones POST
 require_once __DIR__ . '/csrf.php';
 
+// Auditoría de cambios (función auditar())
+require_once __DIR__ . '/auditoria.php';
+
 /**
  * Mensaje seguro para mostrar al usuario cuando ocurre una excepción.
  *  - Avisos de negocio lanzados por el propio código (new Exception("...")): se muestran tal cual.

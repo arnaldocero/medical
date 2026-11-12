@@ -71,6 +71,8 @@ try {
     ]);
 
     $nueva_cita_id = $pdo->lastInsertId();
+    auditar($pdo, 'cita', 'crear_express', $nueva_cita_id, "Creó la Atención Express #$nueva_cita_id", null,
+        ['paciente_id' => $paciente_id, 'medico_id' => $medico_id, 'sede' => $centro_id, 'consultorio_id' => $consultorio_id, 'servicio_id' => $servicio_id, 'valor' => $valor_cita]);
 
     echo json_encode([
         'status'            => 'success',

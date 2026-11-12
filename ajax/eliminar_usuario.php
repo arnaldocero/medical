@@ -33,6 +33,8 @@ if (isset($_POST['id'])) {
     $stmt = $pdo->prepare("UPDATE usuarios_clinicas SET estado = 0 WHERE id = ? AND clinica_id = ? AND rol_id NOT IN ($rolesExcluidos)");
 
     if ($stmt->execute([$id, $_SESSION['clinica']]) && $stmt->rowCount() > 0) {
+        $uAud = filaAuditoria($pdo, 'SELECT nombre, usuario FROM usuarios_clinicas WHERE id = ?', [$id]);
+        auditar($pdo, 'usuario', 'desactivar', $id, "Desactivó al usuario '{$uAud['usuario']}' ({$uAud['nombre']})", ['estado' => 1], ['estado' => 0]);
         echo json_encode(['status' => 'success', 'message' => 'Usuario desactivado correctamente']);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'No se pudo desactivar el usuario.']);

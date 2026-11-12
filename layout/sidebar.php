@@ -79,7 +79,7 @@ if ($nombreUsuario === '') {
         <?php endif; ?>
 
         <!-- CATEGORÍA: PERSONAL Y PACIENTES -->
-        <?php if ((tienePermiso('usuarios.administrar') || tienePermiso('usuarios.ver')) || tienePermiso('medicos.administrar') || tienePermiso('pacientes.gestionar') || (isset($_SESSION['rol']) && $_SESSION['rol'] == 1) || tienePermiso('roles.administrar')): ?>
+        <?php if ((tienePermiso('usuarios.administrar') || tienePermiso('usuarios.ver')) || tienePermiso('medicos.administrar') || tienePermiso('pacientes.gestionar') || (isset($_SESSION['rol']) && $_SESSION['rol'] == 1) || tienePermiso('roles.administrar') || tienePermiso('auditoria.ver')): ?>
         <li class="nav-item has-treeview">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-users"></i>
@@ -122,6 +122,15 @@ if ($nombreUsuario === '') {
               <a href="pacientes.php" class="nav-link">
                 <i class="fas fa-user-injured nav-icon"></i>
                 <p>Gestión Pacientes</p>
+              </a>
+            </li>
+            <?php endif; ?>
+
+            <?php if (tienePermiso('auditoria.ver')): ?>
+            <li class="nav-item">
+              <a href="auditoria.php" class="nav-link">
+                <i class="fas fa-clipboard-list nav-icon text-info"></i>
+                <p>Auditoría</p>
               </a>
             </li>
             <?php endif; ?>

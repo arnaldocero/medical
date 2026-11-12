@@ -293,6 +293,10 @@ try {
     $stmtCita->execute([$cita_id]);
 
     $pdo->commit();
+    auditar($pdo, 'historia', 'crear', $historia_clinica_id, "Registró la historia clínica #$historia_clinica_id (cita #$cita_id, formato: {$formato['nombre']})", null, [
+        'cita_id' => $cita_id, 'paciente_id' => $paciente_id, 'formato_id' => $formato_id, 'diagnostico_id' => $diagnostico_id,
+        'motivo_consulta' => $motivo_consulta, 'formula_id' => $formula_id ?? null, 'medicamentos' => $medicamentos,
+        'campos_formato' => $valoresCampos]);
     echo json_encode(['status' => 'success', 'message' => 'Atención médica, odontograma y receta guardados correctamente.']);
 
 } catch (Exception $e) {

@@ -88,6 +88,8 @@ if ($action === 'subir_adjunto') {
                 $ruta_para_bd
             ]);
 
+            auditar($pdo, 'adjunto', 'subir', $pdo->lastInsertId(), "Adjuntó '$nombre_personalizado' al paciente #$paciente_id", null,
+                ['paciente_id' => $paciente_id, 'historia_id' => $historia_id, 'tipo' => $tipo_archivo, 'archivo' => $ruta_para_bd]);
             echo json_encode(['status' => 'success', 'message' => 'Documento adjuntado y guardado correctamente.']);
             exit();
 
@@ -172,6 +174,7 @@ if ($action === 'eliminar_adjunto') {
             $stmt_del = $pdo->prepare("DELETE FROM pacientes_adjuntos WHERE id = ?");
             $stmt_del->execute([$id]);
 
+            auditar($pdo, 'adjunto', 'eliminar', $id, "Eliminó un adjunto del paciente #$pacienteAdjunto", ['archivo' => $archivo['ruta_archivo'], 'paciente_id' => $pacienteAdjunto], null);
             echo json_encode(['status' => 'success', 'message' => 'Archivo eliminado correctamente.']);
             exit();
         } else {

@@ -110,6 +110,8 @@ switch ($action) {
             }
 
             $pdo->commit();
+            auditar($pdo, 'formula', 'crear', $formula_id, "Creó la fórmula médica #$formula_id", null, [
+                'paciente_datos_id' => $paciente_datos_id, 'diagnostico' => $diagnostico, 'observaciones' => $observaciones, 'medicamentos' => $medicamentos]);
             echo json_encode([
                 'status' => 'success', 
                 'message' => 'Fórmula médica generada exitosamente por el profesional.',

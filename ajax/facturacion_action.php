@@ -182,6 +182,9 @@ try {
             // Si todo salió bien, guardamos los cambios de forma permanente
             $pdo->commit();
 
+            auditar($pdo, 'factura', 'emitir', $factura_id, "Emitió la factura $numero_factura por $" . number_format($total, 0, ',', '.'), null, [
+                'numero' => $numero_factura, 'paciente_id' => $paciente_id, 'total' => $total, 'contrato_id' => $contrato_id,
+                'dian_resolucion_id' => $dian_resolucion_id, 'metodo_pago' => $metodo_pago, 'detalles' => $detalles]);
             echo json_encode([
                 "status" => "success", 
                 "message" => "Factura $numero_factura generada correctamente conforme a la ley.", 

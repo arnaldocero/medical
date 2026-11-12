@@ -47,6 +47,8 @@ switch ($action) {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$clinica_id, $centro_id, $nombre_generico, $nombre_comercial, $presentacion, $stock_actual, $stock_minimo, $codigo_barras]);
 
+            auditar($pdo, 'medicamento', 'crear', $pdo->lastInsertId(), "Registró el medicamento $nombre_generico (stock inicial $stock_actual)", null,
+                ['nombre_generico' => $nombre_generico, 'presentacion' => $presentacion, 'stock_actual' => $stock_actual, 'sede' => $centro_id]);
             echo json_encode(['status' => 'success', 'message' => 'Medicamento registrado exitosamente en inventario.']);
         } catch (PDOException $e) {
             echo json_encode(['status' => 'error', 'message' => mensajeErrorInterno($e)]);

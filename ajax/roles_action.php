@@ -83,6 +83,12 @@ try {
             exit();
         }
 
+        $permisosRolAud = function ($rolId) use ($pdo) {
+            $s = $pdo->prepare('SELECT p.slug FROM rol_permisos rp JOIN permisos p ON p.id = rp.permiso_id WHERE rp.rol_id = ? ORDER BY p.slug');
+            $s->execute([$rolId]);
+            return $s->fetchAll(PDO::FETCH_COLUMN);
+        };
+        $antesAud = $idRol ? (filaAuditoria($pdo, 'SELECT nombre_rol, descripcion FROM roles_clinicas WHERE id = ?', [$idRol]) ?? []) + ['permisos' => $permisosRolAud($idRol)] : null;
         $pdo->beginTransaction();
 
         // Verificar duplicados de nombre
@@ -128,6 +134,8 @@ try {
         }
 
         $pdo->commit();
+        auditar($pdo, 'rol', $idRol ? 'editar' : 'crear', $targetId, ($idRol ? 'Editó' : 'Creó') . " el rol $nombre_rol y sus permisos", $antesAud,
+            ['nombre_rol' => $nombre_rol, 'descripcion' => $descripcion, 'permisos' => $permisosRolAud($targetId)]);
         echo json_encode(['status' => 'success', 'message' => $msg]);
         exit();
     }
@@ -170,6 +178,7 @@ try {
         $stmtDelR->execute([$id]);
 
         $pdo->commit();
+        auditar($pdo, 'rol', 'eliminar', $_POST['id'] ?? null, 'Eliminó el rol #' . intval($_POST['id'] ?? 0));
         echo json_encode(['status' => 'success', 'message' => 'Rol eliminado exitosamente.']);
         exit();
     }

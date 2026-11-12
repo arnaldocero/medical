@@ -76,6 +76,7 @@ try {
     }
 
     $pdo->commit();
+    auditar($pdo, 'sedes', 'asignar', $usuario_id, "Cambió las sedes del usuario #$usuario_id", ['sedes' => array_values($actuales)], ['sedes' => $final]);
     echo json_encode(['status' => 'success', 'message' => 'Sedes actualizadas correctamente']);
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {

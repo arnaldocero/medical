@@ -44,4 +44,5 @@ if (!estadoBloqueoCuenta($pdo, $usuario_id) && intval($usuario['intentos_fallido
 }
 
 desbloquearCuenta($pdo, $usuario_id, $_SESSION['nombre'] . ' (#' . $_SESSION['id'] . ')');
+auditar($pdo, 'usuario', 'desbloquear', $usuario_id, "Desbloqueó la cuenta de {$usuario['nombre']}", ['bloqueado_hasta' => $usuario['bloqueado_hasta'], 'intentos_fallidos' => $usuario['intentos_fallidos']], ['bloqueado_hasta' => null, 'intentos_fallidos' => 0]);
 echo json_encode(['status' => 'success', 'message' => 'Cuenta de ' . $usuario['nombre'] . ' desbloqueada. Ya puede iniciar sesión.']);

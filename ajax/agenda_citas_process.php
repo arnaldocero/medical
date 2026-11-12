@@ -256,6 +256,10 @@ switch ($action) {
             ]);
 
             if ($res) {
+                $citaAud = $pdo->lastInsertId();
+                auditar($pdo, 'cita', 'crear', $citaAud, "Agendó la cita #$citaAud para el $fecha_cita a las $hora_inicio", null,
+                    ['paciente_id' => (int) $paciente_id, 'medico_id' => (int) $medico_id, 'sede' => (int) $centro_id, 'consultorio_id' => (int) $consultorio_id,
+                     'servicio_id' => (int) $servicio_id, 'fecha' => $fecha_cita, 'hora' => $hora_inicio, 'valor' => $valor_cita]);
                 echo json_encode(['status' => 'success', 'message' => '¡Excelente! Cita agendada correctamente.']);
             } else {
                 echo json_encode(['status' => 'error', 'message' => 'No se pudo guardar la cita médica.']);

@@ -101,6 +101,7 @@ switch ($action) {
 
             // Si todo salió bien, confirmamos los cambios en la BD
             $pdo->commit();
+            auditar($pdo, 'formula', 'despachar', $formula_id, "Despachó la fórmula #$formula_id", ['estado' => 'PENDIENTE'], ['estado' => 'DESPACHADA', 'items' => $items]);
             echo json_encode(['status' => 'success', 'message' => 'Fórmula médica despachada y stock actualizado correctamente.']);
 
         } catch (Exception $e) {

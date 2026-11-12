@@ -10,7 +10,8 @@ if (empty($token) || strlen($password) < 6) {
     exit();
 }
 
-$stmt = $pdo->prepare("SELECT id FROM usuarios_clinicas WHERE token_recuperacion = ? AND expira_recuperacion > NOW() AND estado = 1");
+require_once '../config/auditoria.php';
+$stmt = $pdo->prepare("SELECT id, nombre, clinica_id FROM usuarios_clinicas WHERE token_recuperacion = ? AND expira_recuperacion > NOW() AND estado = 1");
 $stmt->execute([hash('sha256', $token)]); // En BD se guarda solo el hash del token
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -25,6 +26,8 @@ if ($user) {
     ");
     $update->execute([$passHash, $user['id']]);
 
+    auditar($pdo, 'usuario', 'restablecer_contrasena', $user['id'], "{$user['nombre']} restableció su contraseña con el enlace enviado a su correo", null, null,
+        ['id' => $user['id'], 'nombre' => $user['nombre'], 'clinica' => $user['clinica_id']]);
     echo json_encode(['status' => 'success', 'message' => 'Contraseña actualizada correctamente. Redirigiendo al login...']);
 } else {
     echo json_encode(['status' => 'error', 'message' => 'El token ha expirado o ya fue utilizado.']);

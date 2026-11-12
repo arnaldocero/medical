@@ -44,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
 
+        $antesAud = $idUsuario ? filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, p.tipo_documento, p.documento_identidad, p.telefono, p.direccion, p.cargo FROM usuarios_clinicas u LEFT JOIN perfiles_usuarios p ON p.usuario_id = u.id WHERE u.id = ?', [$idUsuario]) : null;
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $pdo->beginTransaction();
 
@@ -116,6 +117,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         $pdo->commit();
+        $idAud = $idUsuario ?: $idUsuarioCreado;
+        $despuesAud = filaAuditoria($pdo, 'SELECT u.nombre, u.usuario, u.email, u.rol_id, u.estado, p.tipo_documento, p.documento_identidad, p.telefono, p.direccion, p.cargo FROM usuarios_clinicas u LEFT JOIN perfiles_usuarios p ON p.usuario_id = u.id WHERE u.id = ?', [$idAud]);
+        if (!empty($_POST['password'])) { $despuesAud['cambio_de_contrasena'] = 'sí'; }
+        auditar($pdo, 'usuario', $idUsuario ? 'editar' : 'crear', $idAud, ($idUsuario ? 'Editó' : 'Creó') . " el usuario '{$despuesAud['usuario']}' ({$despuesAud['nombre']})", $antesAud, $despuesAud);
         echo json_encode(['status' => 'success', 'message' => $mensaje]);
 
     } catch (Exception $e) {
