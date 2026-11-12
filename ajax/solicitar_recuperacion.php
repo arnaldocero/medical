@@ -3,11 +3,18 @@ header('Content-Type: application/json');
 require_once '../config/db.php';
 require_once '../config/app.php';
 require_once '../config/correo.php';
+require_once '../config/login_seguridad.php';
 
 $email = trim($_POST['email'] ?? '');
 
 if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     echo json_encode(['status' => 'warning', 'message' => 'Por favor ingrese un correo electrónico válido.']);
+    exit();
+}
+
+// Límite de solicitudes por conexión y por correo (evita inundar de correos a un usuario)
+if ($espera = limiteRecuperacion($pdo, $email)) {
+    echo json_encode(['status' => 'warning', 'message' => $espera]);
     exit();
 }
 
@@ -19,6 +26,9 @@ $respuesta = ['status' => 'success', 'message' => $mensajeGenerico];
 $stmt = $pdo->prepare("SELECT id, nombre, email FROM usuarios_clinicas WHERE email = ? AND estado = 1 LIMIT 1");
 $stmt->execute([$email]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Cada solicitud cuenta para el límite, exista o no el correo
+registrarSolicitudRecuperacion($pdo, $user['id'] ?? null, $email);
 
 if ($user) {
     // Generar token único y establecer expiración a 1 hora.

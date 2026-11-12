@@ -194,3 +194,32 @@ $(document).ready(function() {
         });
     });
 });
+
+// --- DESBLOQUEAR CUENTA (Gestión Usuarios, Médicos y Pacientes) ---
+// Cuentas bloqueadas por 3 intentos fallidos de inicio de sesión: el administrador las libera sin esperar 30 minutos
+$(document).on('click', '.btnDesbloquear', function () {
+    const id = $(this).data('id');
+    const nombre = $(this).data('nombre');
+    Swal.fire({
+        title: '¿Desbloquear la cuenta?',
+        text: `${nombre} podrá volver a iniciar sesión de inmediato. Verifique antes que fue el propio usuario quien se equivocó de contraseña.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desbloquear',
+        cancelButtonText: 'Cancelar'
+    }).then((r) => {
+        if (!r.isConfirmed) return;
+        $.post('ajax/desbloquear_usuario.php', { usuario_id: id }, function (res) {
+            Swal.fire(res.status === 'success' ? '¡Desbloqueada!' : 'Atención', res.message, res.status === 'success' ? 'success' : 'info')
+                .then(() => {
+                    if ($('#tablaMedicos').length && $.fn.DataTable.isDataTable('#tablaMedicos')) {
+                        $('#tablaMedicos').DataTable().ajax.reload(null, false);
+                    } else {
+                        location.reload();
+                    }
+                });
+        }, 'json').fail(function (xhr) {
+            Swal.fire('Error', (xhr.responseJSON && xhr.responseJSON.message) || 'No se pudo desbloquear la cuenta.', 'error');
+        });
+    });
+});

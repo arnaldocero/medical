@@ -13,6 +13,13 @@ define('LOGIN_MAX_INTENTOS', 3);
 define('LOGIN_MINUTOS_BLOQUEO', 30);
 define('LOGIN_MAX_INTENTOS_IP', 10);
 
+// "Olvidé mi contraseña": máximo de solicitudes por conexión (IP) y por correo
+define('RECUPERACION_MAX_IP', 5);          // en 30 minutos
+define('RECUPERACION_MAX_CORREO', 3);      // en 60 minutos
+
+// Registros de login_intentos que se conservan (días)
+define('LOGIN_DIAS_HISTORIAL', 90);
+
 function ipCliente() {
     return substr($_SERVER['REMOTE_ADDR'] ?? 'desconocida', 0, 45);
 }
@@ -27,7 +34,8 @@ function registrarIntentoLogin($pdo, $usuarioId, $usuarioIngresado, $exitoso, $m
  */
 function ipBloqueada($pdo) {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM login_intentos
-                           WHERE ip = ? AND exitoso = 0 AND fecha > NOW() - INTERVAL " . LOGIN_MINUTOS_BLOQUEO . " MINUTE");
+                           WHERE ip = ? AND exitoso = 0 AND fecha > NOW() - INTERVAL " . LOGIN_MINUTOS_BLOQUEO . " MINUTE
+                             AND (motivo IS NULL OR motivo <> 'recuperacion')");
     $stmt->execute([ipCliente()]);
     return $stmt->fetchColumn() >= LOGIN_MAX_INTENTOS_IP;
 }
@@ -94,4 +102,58 @@ function notificarBloqueo($pdo, array $usuario) {
           . '<p><a href="' . $enlace . '" style="background:#dc3545;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none;">Restablecer contraseña</a></p>';
 
     enviarCorreo($usuario['email'], 'Alerta de seguridad: cuenta bloqueada', $html);
+}
+
+/**
+ * Desbloqueo manual de una cuenta por un administrador (no espera los 30 minutos).
+ * Queda registrado en login_intentos con motivo 'desbloqueo_admin'.
+ */
+function desbloquearCuenta($pdo, $usuarioId, $quienDesbloquea) {
+    limpiarFallosCuenta($pdo, $usuarioId);
+    $pdo->prepare("INSERT INTO login_intentos (usuario_id, usuario_ingresado, ip, exitoso, motivo) VALUES (?, ?, ?, 1, 'desbloqueo_admin')")
+        ->execute([$usuarioId, mb_substr('Desbloqueado por: ' . $quienDesbloquea, 0, 150), ipCliente()]);
+}
+
+/**
+ * Límite de "Olvidé mi contraseña". Devuelve un mensaje de espera si se superó, o null si puede continuar.
+ * El conteo por correo se hace exista o no el correo, para no revelar qué cuentas existen.
+ */
+function limiteRecuperacion($pdo, $email) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM login_intentos WHERE motivo = 'recuperacion' AND ip = ? AND fecha > NOW() - INTERVAL 30 MINUTE");
+    $stmt->execute([ipCliente()]);
+    if ($stmt->fetchColumn() >= RECUPERACION_MAX_IP) {
+        return 'Demasiadas solicitudes desde esta conexión. Espere 30 minutos e intente de nuevo.';
+    }
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM login_intentos WHERE motivo = 'recuperacion' AND usuario_ingresado = ? AND fecha > NOW() - INTERVAL 60 MINUTE");
+    $stmt->execute([mb_substr($email, 0, 150)]);
+    if ($stmt->fetchColumn() >= RECUPERACION_MAX_CORREO) {
+        return 'Ya se enviaron varias solicitudes para este correo. Revise su bandeja de entrada (y spam) o espere una hora.';
+    }
+    return null;
+}
+
+/**
+ * Registra una solicitud de recuperación (cuenta para el límite; no cuenta como intento fallido de login).
+ */
+function registrarSolicitudRecuperacion($pdo, $usuarioId, $email) {
+    registrarIntentoLogin($pdo, $usuarioId, $email, false, 'recuperacion');
+}
+
+/**
+ * Borra los registros de login_intentos de más de LOGIN_DIAS_HISTORIAL días.
+ * Se ejecuta de vez en cuando (aprox. 1 de cada 50 inicios de sesión): no necesita tareas programadas.
+ */
+function limpiarIntentosAntiguos($pdo, $probabilidad = 50) {
+    if (random_int(1, $probabilidad) !== 1) {
+        return 0;
+    }
+    return $pdo->exec("DELETE FROM login_intentos WHERE fecha < NOW() - INTERVAL " . LOGIN_DIAS_HISTORIAL . " DAY");
+}
+
+/**
+ * Columnas SQL para mostrar en los listados si la cuenta está bloqueada.
+ */
+function sqlEstadoBloqueo($alias = 'u') {
+    return "($alias.bloqueado_hasta IS NOT NULL AND $alias.bloqueado_hasta > NOW()) AS bloqueado,
+            DATE_FORMAT($alias.bloqueado_hasta, '%h:%i %p') AS bloqueado_hasta_txt";
 }

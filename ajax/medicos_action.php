@@ -9,6 +9,7 @@ session_start();
 // Seguridad: sesión activa + permiso del módulo
 require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../config/roles.php';
+require_once __DIR__ . '/../config/login_seguridad.php';
 requerirPermisoAJAX('medicos.administrar');
 
 // 2. Control de sesión y clínica asignada
@@ -38,6 +39,7 @@ try {
                     u.rol_id,
                     r.nombre_rol,
                     u.estado AS usuario_estado,
+                    " . sqlEstadoBloqueo('u') . ",
                     m.id AS medico_id,
                     m.licencia_medica, 
                     m.especialidad AS especialidad_id,

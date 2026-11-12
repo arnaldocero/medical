@@ -10,7 +10,15 @@ $(document).ready(function () {
             "dataSrc": "" 
         },
         "columns": [
-            { "data": "medico_nombre" },
+            {
+                "data": "medico_nombre",
+                "render": function (data, type, row) {
+                    const bloqueo = parseInt(row.bloqueado) === 1
+                        ? `<span class="badge badge-danger d-block mt-1" title="Bloqueada por intentos fallidos de inicio de sesión"><i class="fas fa-user-lock"></i> Bloqueada hasta ${row.bloqueado_hasta_txt}</span>`
+                        : '';
+                    return $('<div>').text(data).html() + bloqueo;
+                }
+            },
             { "data": "medico_email" },
             { "data": "usuario" },
             { "data": "licencia_medica" },
@@ -20,8 +28,11 @@ $(document).ready(function () {
                 "orderable": false,
                 "render": function (data, type, row) {
                     // SE CAMBIARON LAS CLASES PARA EVITAR COLISIONES CON OTROS MÓDULOS
-                    return `
-                        <button class="btn btn-warning btn-sm btnEditarMedico shadow-sm" 
+                    const desbloquear = parseInt(row.bloqueado) === 1
+                        ? `<button class="btn btn-success btn-sm btnDesbloquear shadow-sm" title="Desbloquear cuenta" data-id="${row.usuario_id}" data-nombre="${row.medico_nombre}"><i class="fas fa-unlock"></i></button>`
+                        : '';
+                    return desbloquear + `
+                        <button class="btn btn-warning btn-sm btnEditarMedico shadow-sm"
                             data-id="${row.usuario_id}" 
                             data-nombre="${row.medico_nombre}"
                             data-email="${row.medico_email}"

@@ -18,6 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit();
     }
 
+    // Limpieza ocasional del historial de intentos (registros de más de 90 días)
+    limpiarIntentosAntiguos($pdo);
+
     if ($userOrEmail === '' || $password === '') {
         echo json_encode(['status' => 'error', 'message' => 'Llene todos los campos.']);
         exit();

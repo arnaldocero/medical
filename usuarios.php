@@ -8,7 +8,7 @@ if (!isset($_SESSION['id'])) { header("Location: login.php"); exit(); }
 require_once 'config/db.php';
 require_once 'config/security.php';
 require_once 'config/roles.php';
-
+require_once 'config/login_seguridad.php';
 
 include 'layout/header.php'; 
 include 'layout/nav.php'; 
@@ -21,7 +21,7 @@ $rolesPersonal = array_values(array_filter(obtenerRolesPersonal($pdo), fn($r) =>
 $stmt = $pdo->prepare("
     SELECT u.id, u.nombre, u.usuario, u.email, u.estado, u.fecha_creacion, r.nombre_rol, u.rol_id,
            p.tipo_documento, p.documento_identidad, p.telefono, p.direccion, 
-           p.cargo, p.fecha_nacimiento, p.genero
+           p.cargo, p.fecha_nacimiento, p.genero, " . sqlEstadoBloqueo('u') . "
     FROM usuarios_clinicas u
     LEFT JOIN roles_clinicas r ON u.rol_id = r.id
     LEFT JOIN perfiles_usuarios p ON u.id = p.usuario_id
@@ -67,7 +67,12 @@ $usuarios = $stmt->fetchAll();
                     <tbody>
                         <?php foreach($usuarios as $u): ?>
                         <tr>
-                            <td><?= htmlspecialchars($u['nombre']) ?></td>
+                            <td>
+                                <?= htmlspecialchars($u['nombre']) ?>
+                                <?php if ($u['bloqueado']): ?>
+                                    <span class="badge badge-danger d-block mt-1" title="Bloqueada por intentos fallidos de inicio de sesión"><i class="fas fa-user-lock"></i> Bloqueada hasta <?= htmlspecialchars($u['bloqueado_hasta_txt']) ?></span>
+                                <?php endif; ?>
+                            </td>
                             <td><?= htmlspecialchars($u['usuario']) ?></td>
                             <td><?= !empty($u['cargo']) ? htmlspecialchars($u['cargo']) : '<span class="text-muted">No asignado</span>' ?></td>
                             <td><?= htmlspecialchars($u['email']) ?></td>
@@ -76,6 +81,10 @@ $usuarios = $stmt->fetchAll();
                                 <?php if (!puedeTocarRol($u['rol_id'])): ?>
                                     <span class="badge badge-light border" title="Solo el Administrador puede modificar este usuario"><i class="fas fa-lock"></i> Protegido</span>
                                 <?php else: ?>
+                                <!-- Botón Desbloquear (solo si la cuenta está bloqueada) -->
+                                <?php if ($u['bloqueado'] && puedeUsuarios('editar')): ?>
+                                    <button class="btn btn-success btn-sm btnDesbloquear" title="Desbloquear cuenta" data-id="<?= $u['id'] ?>" data-nombre="<?= htmlspecialchars($u['nombre']) ?>"><i class="fas fa-unlock"></i></button>
+                                <?php endif; ?>
                                 <!-- Botón Asignar Sede -->
                                 <?php if (puedeUsuarios('asignar_sede')): ?>
                                     <button class="btn btn-info btn-sm btnAsignarSede" data-id="<?= $u['id'] ?>" data-nombre="<?= htmlspecialchars($u['nombre']) ?>"><i class="fas fa-hospital"></i></button>

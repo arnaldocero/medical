@@ -16,6 +16,7 @@ try {
     // 1. CONSULTA DE ROLES ASIGNABLES A PACIENTES
     // (clasificación central en config/roles.php)
     require_once 'config/roles.php';
+    require_once 'config/login_seguridad.php';
     $rolesPacientes = obtenerRolesPacientes($pdo);
 
     // 2. CONSULTA DE PACIENTES CON ROL Y EPS ASOCIADA
@@ -25,6 +26,7 @@ try {
             p.documento_identidad, p.telefono_contacto, p.direccion, p.eps_id, 
             p.contacto_emergencia_nombre, p.contacto_emergencia_telefono,
             u.nombre, u.email, u.estado, u.usuario, u.rol_id,
+            " . sqlEstadoBloqueo('u') . ",
             e.nombre AS nombre_eps,
             r.nombre_rol
         FROM pacientes_datos p
@@ -96,10 +98,18 @@ try {
                             <td>
                                 <?= $p['estado'] == 1 
                                     ? '<span class="badge badge-success">Activo</span>' 
-                                    : '<span class="badge badge-danger">Inactivo</span>' 
+                                    : '<span class="badge badge-danger">Inactivo</span>'
                                 ?>
+                                <?php if ($p['bloqueado']): ?>
+                                    <span class="badge badge-danger d-block mt-1" title="Bloqueada por intentos fallidos de inicio de sesión"><i class="fas fa-user-lock"></i> Bloqueada hasta <?= htmlspecialchars($p['bloqueado_hasta_txt']) ?></span>
+                                <?php endif; ?>
                             </td>
                             <td>
+                                <?php if ($p['bloqueado']): ?>
+                                <button class="btn btn-success btn-sm btnDesbloquear shadow-sm" title="Desbloquear cuenta" data-id="<?= $p['usuario_id'] ?>" data-nombre="<?= htmlspecialchars($p['nombre']) ?>">
+                                    <i class="fas fa-unlock"></i>
+                                </button>
+                                <?php endif; ?>
                                 <button class="btn btn-info btn-sm btnHistorial shadow-sm" data-id="<?= $p['id'] ?>" data-nombre="<?= htmlspecialchars($p['nombre']) ?>" title="Ver Historial Clínico">
                                     <i class="fas fa-notes-medical"></i>
                                 </button>
