@@ -73,6 +73,20 @@ if (!formatoTieneSeccion($formato, 'plan_formula')) {
 }
 $guardar_vision = formatoTieneSeccion($formato, 'vision');
 
+// FÓRMULA: los medicamentos deben ser de la farmacia de la sede de la cita
+// (cada sede tiene su propio stock; si no, la fórmula no se podría despachar)
+$idsMedicamentos = array_values(array_unique(array_filter(array_map(function ($item) {
+    return intval($item['medicamento_id'] ?? 0);
+}, (array) $medicamentos))));
+if (!empty($idsMedicamentos)) {
+    $stmtMedSede = $pdo->prepare("SELECT COUNT(*) FROM medicamentos WHERE centro_id = ? AND clinica_id = ? AND id IN (" . implode(',', $idsMedicamentos) . ")");
+    $stmtMedSede->execute([$centro_cita, intval($_SESSION['clinica'])]);
+    if ((int) $stmtMedSede->fetchColumn() !== count($idsMedicamentos)) {
+        echo json_encode(['status' => 'warning', 'message' => 'La fórmula incluye medicamentos que no pertenecen a la farmacia de esta sede.']);
+        exit();
+    }
+}
+
 // CAMPOS PERSONALIZADOS: obligatorios y tipo de dato
 $valoresCampos = [];
 $respuestas = (array) ($_POST['campos_formato'] ?? []);
